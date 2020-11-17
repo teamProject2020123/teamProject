@@ -50,10 +50,11 @@ public class OrderFood extends JFrame {
 				
 				String t = needText.getText();
 				if(t.equals("")) {
-					list.add("추가 주문사항 없음");
+					list.add("No Additional Order");
 				} else list.add(needText.getText());
 				
 				String msg = list.get(0)+list.get(1)+list.get(2)+list.get(3)+list.get(4);
+				udpmsg.GetOrder(msg);
 				
 				JOptionPane.showConfirmDialog(null, "아래 내용이 맞나요?\n"
 						+ msg ,"CHECK_ORDER", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);

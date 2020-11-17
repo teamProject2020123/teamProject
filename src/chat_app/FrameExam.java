@@ -22,6 +22,8 @@ public class FrameExam extends JFrame {
 	private OrderFood orderFood = new OrderFood();
 	private UDPmsg udpmsg = new UDPmsg();
 	
+	private String OrderMsg;
+	
 	public FrameExam() {
 		setView();
 		JButton OrderBtn = new JButton("\uC8FC\uBB38");
@@ -45,7 +47,7 @@ public class FrameExam extends JFrame {
 		exitBtn.setBounds(248, 94, 162, 134);
 		contentPane.add(exitBtn);
 		
-		JLabel lblNewLabel = new JLabel("IP : "+udpmsg.getS()+" / UDP");
+		JLabel lblNewLabel = new JLabel("IP : " + " / UDP");
 		lblNewLabel.setBounds(49, 10, 326, 49);
 		contentPane.add(lblNewLabel);
 		
