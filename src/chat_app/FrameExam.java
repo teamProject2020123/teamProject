@@ -21,28 +21,37 @@ public class FrameExam extends JFrame {
 	private JPanel contentPane;
 	private OrderFood orderFood = new OrderFood();
 	private UDPmsg udpmsg = new UDPmsg();
-
+	
+	private String OrderMsg;
+	
 	public FrameExam() {
 		setView();
 		JButton OrderBtn = new JButton("\uC8FC\uBB38");
-
-		OrderBtn.addActionListener(e-> {
-			udpmsg.sendMsg("CALL to Store by client");
-			orderFood.setVisible(true);
-			dispose();
+		OrderBtn.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent arg0) {
+				udpmsg.sendMsg("CALL to Store by client");
+				
+				orderFood.setVisible(true);
+				dispose();
+			}
 		});
 		OrderBtn.setBounds(40, 94, 168, 134);
 		contentPane.add(OrderBtn);
-
+		
 		JButton exitBtn = new JButton("\uC885\uB8CC");
-		exitBtn.addActionListener(e-> {System.exit(0);});
+		exitBtn.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent arg0) {
+//				dispose();
+				System.exit(0);
+			}
+		});
 		exitBtn.setBounds(248, 94, 162, 134);
 		contentPane.add(exitBtn);
-
+		
 		JLabel lblNewLabel = new JLabel("IP : " + " / UDP");
 		lblNewLabel.setBounds(49, 10, 326, 49);
 		contentPane.add(lblNewLabel);
-
+		
 	}
 	private void setView() {
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -53,7 +62,15 @@ public class FrameExam extends JFrame {
 		contentPane.setLayout(null);
 	}
 	public static void main(String[] args) {
-		FrameExam frame = new FrameExam();
-		frame.setVisible(true);
+		EventQueue.invokeLater(new Runnable() {
+			public void run() {
+				try {
+					FrameExam frame = new FrameExam();
+					frame.setVisible(true);
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+		});
 	}
 }
