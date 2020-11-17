@@ -63,7 +63,6 @@ public class OrderFood extends JFrame {
 			}
 		});
 		comboBox.addItemListener(e-> {
-			//			System.out.println("selected change");
 			cb = (JComboBox) e.getSource();
 			String index = (String) cb.getSelectedItem();
 			if(index == "Chicken") {

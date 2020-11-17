@@ -30,6 +30,7 @@ public class FrameExam extends JFrame {
 		OrderBtn.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
 				udpmsg.sendMsg("CALL to Store by client");
+				
 				orderFood.setVisible(true);
 				dispose();
 			}
