@@ -16,7 +16,10 @@ public class Store {
 				if(recvData.startsWith("CALL")) {
 					sendPacket("Ringing", buffer, ds,dp);
 					sendPacket("OK",buffer,ds,dp);
-				}			
+				}else if(recvData.startsWith("ORDER")) {
+					sendPacket("CHECK\n"+recvData,buffer,ds,dp);
+					ds.receive(dp);
+				}
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
