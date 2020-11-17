@@ -45,7 +45,7 @@ public class FrameExam extends JFrame {
 		exitBtn.setBounds(248, 94, 162, 134);
 		contentPane.add(exitBtn);
 		
-		JLabel lblNewLabel = new JLabel("IP : "+udpmsg.getS()+" / UDP");
+		JLabel lblNewLabel = new JLabel("IP : 127.0.0.1/UDP");
 		lblNewLabel.setBounds(49, 10, 326, 49);
 		contentPane.add(lblNewLabel);
 		

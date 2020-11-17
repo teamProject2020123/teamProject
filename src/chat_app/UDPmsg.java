@@ -17,12 +17,4 @@ public class UDPmsg {
 			e.printStackTrace();
 		}
 	}
-//	public InetAddress getIpAddress() {
-//		ip = 
-//		return ip;
-//	}
-	public String getS() {
-		System.out.println("msg : "+s);
-		return s;
-	}
 }
