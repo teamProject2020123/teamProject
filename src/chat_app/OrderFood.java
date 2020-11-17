@@ -43,69 +43,67 @@ public class OrderFood extends JFrame {
 		btnNewButton.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
 				list = new ArrayList<>();
-				list.add(comboBox.getSelectedItem().toString());
-				list.add(comboBox1.getSelectedItem().toString());
-				list.add(comboBox2.getSelectedItem().toString());
-				list.add(comboBox3.getSelectedItem().toString());
+				list.add(comboBox.getSelectedItem().toString() + "\n");
+				list.add(comboBox1.getSelectedItem().toString() + "\n");
+				list.add(comboBox2.getSelectedItem().toString() + "\n");
+				list.add(comboBox3.getSelectedItem().toString() + "\n");
 				
 				String t = needText.getText();
 				if(t.equals("")) {
 					list.add("추가 주문사항 없음");
 				} else list.add(needText.getText());
 				
+				String msg = list.get(0)+list.get(1)+list.get(2)+list.get(3)+list.get(4);
+				
 				JOptionPane.showConfirmDialog(null, "아래 내용이 맞나요?\n"
-						+ list.get(0) +"\n"
-						+ "+)"+ list.get(1) +"\n"
-						+ "+)"+ list.get(2) +"\n"
-						+ "+)"+ list.get(3) +"\n"
-						+ "+)"+ list.get(4) +"\n", "CHECK_ORDER", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
-				udpmsg.sendMsg("SUCCESS");
+						+ msg ,"CHECK_ORDER", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
+				udpmsg.sendMsg("ORDER\n" + msg);
 				JOptionPane.showMessageDialog(null, "예상 소요 시간은 30~40분입니다.");
 			}
 		});
 		comboBox.addItemListener(e-> {
 			cb = (JComboBox) e.getSource();
 			String index = (String) cb.getSelectedItem();
-			if(index == "치킨") {
+			if(index == "Chicken") {
 				sub1.clear();
 				sub2.clear();
 				sub3.clear();
-				sub1.add("순살");
-				sub1.add("뼈");
-				sub2.add("콜라 500ml");
-				sub2.add("사이다 500ml");
-				sub2.add("콜라 1.5L");
-				sub2.add("사이다 1.5L");
-				sub3.add("선택 안함");
-				sub3.add("양념소스 추가");
+				sub1.add("Boneless");
+				sub1.add("Bone");
+				sub2.add("Coke 500ml");
+				sub2.add("Cider 500ml");
+				sub2.add("Coke 1.5L");
+				sub2.add("Cider 1.5L");
+				sub3.add("NO");
+				sub3.add("Add Hot Source");
 				setComboBox();
 			}
-			else if(index=="피자") {
+			else if(index=="Pizza") {
 				sub1.clear();
 				sub2.clear();
 				sub3.clear();
-				sub1.add("없음");
-				sub1.add("치즈크러스트");
-				sub2.add("콜라 500ml");
-				sub2.add("사이다 500ml");
-				sub2.add("콜라 1.5L");
-				sub2.add("사이다 1.5L");
-				sub3.add("선택 안함");
-				sub3.add("어니언소스 추가");
+				sub1.add("No");
+				sub1.add("Cheese Crust");
+				sub2.add("Coke 500ml");
+				sub2.add("Cider 500ml");
+				sub2.add("Coke 1.5L");
+				sub2.add("Cider 1.5L");
+				sub3.add("No");
+				sub3.add("Add Onion Source");
 				setComboBox();
-			} else {
+			} else if(index=="Pork"){
 				sub1.clear();
 				sub2.clear();
 				sub3.clear();
-				sub1.add("보통맛");
-				sub1.add("순한맛");
-				sub1.add("매운맛");
-				sub1.add("아주매운맛");
-				sub2.add("콜라 500ml");
-				sub2.add("사이다 500ml");
-				sub2.add("콜라 1.5L");
-				sub2.add("사이다 1.5L");
-				sub3.add("선택 안함");
+				sub1.add("Normal");
+				sub1.add("No Hot");
+				sub1.add("Hot");
+				sub1.add("Very Hot");
+				sub2.add("Coke 500ml");
+				sub2.add("Cider 500ml");
+				sub2.add("Coke 1.5L");
+				sub2.add("Cider 1.5L");
+				sub3.add("No");
 				setComboBox();
 			}
 		});
@@ -115,17 +113,17 @@ public class OrderFood extends JFrame {
 		sub1 = new ArrayList<>();
 		sub2 = new ArrayList<>();
 		sub3 = new ArrayList<>();
-		main.add("치킨");
-		main.add("피자");
-		main.add("족발");
-		sub1.add("순살");
-		sub1.add("뼈");
-		sub2.add("콜라 500ml");
-		sub2.add("사이다 500ml");
-		sub2.add("콜라 1.5L");
-		sub2.add("사이다 1.5L");
-		sub3.add("선택 안함");
-		sub3.add("양념소스 추가");
+		main.add("Chicken");
+		main.add("Pizza");
+		main.add("Pork");
+		sub1.add("Boneless");
+		sub1.add("Bone");
+		sub2.add("Coke 500ml");
+		sub2.add("Cider 500ml");
+		sub2.add("Coke 1.5L");
+		sub2.add("Cider 1.5L");
+		sub3.add("NO");
+		sub3.add("Add Hot Source");
 
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		setBounds(100, 100, 450, 300);
@@ -190,17 +188,17 @@ public class OrderFood extends JFrame {
 			sub1.clear();
 			sub2.clear();
 			sub3.clear();
-			main.add("치킨");
-			main.add("피자");
-			main.add("족발");
-			sub1.add("순살");
-			sub1.add("뼈");
-			sub2.add("콜라 500ml");
-			sub2.add("사이다 500ml");
-			sub2.add("콜라 1.5L");
-			sub2.add("사이다 1.5L");
-			sub3.add("선택 안함");
-			sub3.add("양념소스 추가");
+			main.add("Chicken");
+			main.add("Pizza");
+			main.add("Pork");
+			sub1.add("Boneless");
+			sub1.add("Bone");
+			sub2.add("Coke 500ml");
+			sub2.add("Cider 500ml");
+			sub2.add("Coke 1.5L");
+			sub2.add("Cider 1.5L");
+			sub3.add("NO");
+			sub3.add("Add Hot Source");
 			comboBox.setModel(new DefaultComboBoxModel(main.toArray()));
 			setComboBox();
 			needText.setText("");
