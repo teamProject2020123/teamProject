@@ -23,6 +23,9 @@ import java.awt.Font;
 import java.awt.event.ActionListener;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
+import java.io.IOException;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
 import java.util.ArrayList;
 import java.awt.event.ActionEvent;
 
@@ -34,6 +37,8 @@ public class OrderFood extends JFrame {
 	private JComboBox comboBox,comboBox1,comboBox2,comboBox3,cb;
 	private ArrayList<String> main,sub1,sub2,sub3,list;
 	private TextArea needText;
+	private DatagramSocket ds;
+	private String sendPacket;
 	public OrderFood() {
 		setView();
 		btnNewButton = new JButton("\uC8FC\uBB38\uD558\uAE30");
@@ -47,18 +52,20 @@ public class OrderFood extends JFrame {
 				list.add(comboBox1.getSelectedItem().toString() + "\n");
 				list.add(comboBox2.getSelectedItem().toString() + "\n");
 				list.add(comboBox3.getSelectedItem().toString() + "\n");
-				
+
 				String t = needText.getText();
 				if(t.equals("")) {
-					list.add("No Additional Order");
+					list.add("No Description");
 				} else list.add(needText.getText());
-				
-				String msg = list.get(0)+list.get(1)+list.get(2)+list.get(3)+list.get(4);
-				udpmsg.GetOrder(msg);
-				
+
+				sendPacket = list.get(0)+list.get(1)+list.get(2)+list.get(3)+list.get(4); //ORDER ~~
+
 				JOptionPane.showConfirmDialog(null, "아래 내용이 맞나요?\n"
-						+ msg ,"CHECK_ORDER", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
-				udpmsg.sendMsg("ORDER\n" + msg);
+						+ sendPacket ,"CHECK_ORDER", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
+				udpmsg.sendMsg("ORDER\n" + sendPacket);
+				//여기서 패킷 받고있어야함.
+				udpmsg.dataReceiver();
+				System.out.println(udpmsg.getPacketData());
 				JOptionPane.showMessageDialog(null, "예상 소요 시간은 30~40분입니다.");
 			}
 		});
@@ -66,49 +73,20 @@ public class OrderFood extends JFrame {
 			cb = (JComboBox) e.getSource();
 			String index = (String) cb.getSelectedItem();
 			if(index == "Chicken") {
-				sub1.clear();
-				sub2.clear();
-				sub3.clear();
-				sub1.add("Boneless");
-				sub1.add("Bone");
-				sub2.add("Coke 500ml");
-				sub2.add("Cider 500ml");
-				sub2.add("Coke 1.5L");
-				sub2.add("Cider 1.5L");
-				sub3.add("NO");
-				sub3.add("Add Hot Source");
+				setChicken();
 				setComboBox();
 			}
 			else if(index=="Pizza") {
-				sub1.clear();
-				sub2.clear();
-				sub3.clear();
-				sub1.add("No");
-				sub1.add("Cheese Crust");
-				sub2.add("Coke 500ml");
-				sub2.add("Cider 500ml");
-				sub2.add("Coke 1.5L");
-				sub2.add("Cider 1.5L");
-				sub3.add("No");
-				sub3.add("Add Onion Source");
+				setPizza();
 				setComboBox();
 			} else if(index=="Pork"){
-				sub1.clear();
-				sub2.clear();
-				sub3.clear();
-				sub1.add("Normal");
-				sub1.add("No Hot");
-				sub1.add("Hot");
-				sub1.add("Very Hot");
-				sub2.add("Coke 500ml");
-				sub2.add("Cider 500ml");
-				sub2.add("Coke 1.5L");
-				sub2.add("Cider 1.5L");
-				sub3.add("No");
+				setPork();
 				setComboBox();
 			}
 		});
 	}
+
+
 	private void setView() {
 		main = new ArrayList<>();
 		sub1 = new ArrayList<>();
@@ -117,14 +95,7 @@ public class OrderFood extends JFrame {
 		main.add("Chicken");
 		main.add("Pizza");
 		main.add("Pork");
-		sub1.add("Boneless");
-		sub1.add("Bone");
-		sub2.add("Coke 500ml");
-		sub2.add("Cider 500ml");
-		sub2.add("Coke 1.5L");
-		sub2.add("Cider 1.5L");
-		sub3.add("NO");
-		sub3.add("Add Hot Source");
+		setChicken();
 
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		setBounds(100, 100, 450, 300);
@@ -186,21 +157,11 @@ public class OrderFood extends JFrame {
 		JButton clearBtn = new JButton("\uCD08\uAE30\uD654");
 		clearBtn.addActionListener(e-> {
 			main.clear();
-			sub1.clear();
-			sub2.clear();
-			sub3.clear();
 			main.add("Chicken");
 			main.add("Pizza");
 			main.add("Pork");
-			sub1.add("Boneless");
-			sub1.add("Bone");
-			sub2.add("Coke 500ml");
-			sub2.add("Cider 500ml");
-			sub2.add("Coke 1.5L");
-			sub2.add("Cider 1.5L");
-			sub3.add("NO");
-			sub3.add("Add Hot Source");
 			comboBox.setModel(new DefaultComboBoxModel(main.toArray()));
+			setChicken();
 			setComboBox();
 			needText.setText("");
 		});
@@ -223,5 +184,48 @@ public class OrderFood extends JFrame {
 		comboBox2.setModel(new DefaultComboBoxModel(sub2.toArray()));
 		comboBox3.setModel(new DefaultComboBoxModel(sub3.toArray()));
 	}
-	
+
+	private void setPork() {
+		sub1.clear();
+		sub2.clear();
+		sub3.clear();
+		sub1.add("Normal");
+		sub1.add("No Hot");
+		sub1.add("Hot");
+		sub1.add("Very Hot");
+		sub2.add("Coke 500ml");
+		sub2.add("Cider 500ml");
+		sub2.add("Coke 1.5L");
+		sub2.add("Cider 1.5L");
+		sub3.add("No");
+	}
+
+	private void setPizza() {
+		sub1.clear();
+		sub2.clear();
+		sub3.clear();
+		sub1.add("No");
+		sub1.add("Cheese Crust");
+		sub2.add("Coke 500ml");
+		sub2.add("Cider 500ml");
+		sub2.add("Coke 1.5L");
+		sub2.add("Cider 1.5L");
+		sub3.add("No");
+		sub3.add("Add Onion Source");
+	}
+
+	private void setChicken() {
+		sub1.clear();
+		sub2.clear();
+		sub3.clear();
+		sub1.add("Boneless");
+		sub1.add("Bone");
+		sub2.add("Coke 500ml");
+		sub2.add("Cider 500ml");
+		sub2.add("Coke 1.5L");
+		sub2.add("Cider 1.5L");
+		sub3.add("NO");
+		sub3.add("Add Hot Source");
+	}
+
 }
