@@ -1,59 +1,62 @@
 package chat_app;
 
-import java.awt.BorderLayout;
-import java.awt.EventQueue;
-
-import javax.swing.JFrame;
-import javax.swing.JPanel;
+import javax.swing.*;
 import javax.swing.border.EmptyBorder;
-import javax.swing.JButton;
-import javax.swing.JTextField;
-import javax.swing.JRadioButton;
-import java.awt.event.ActionListener;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.InetAddress;
-import java.awt.event.ActionEvent;
-import javax.swing.JLabel;
+import java.awt.Font;
+import java.util.ArrayList;
+import javax.swing.*;
 
 public class FrameExam extends JFrame {
 
 	private JPanel contentPane;
+	private JButton orderButton, exitButton;
 	private OrderFood orderFood = new OrderFood();
-	private UDPmsg udpmsg = new UDPmsg();
-	
-	private String OrderMsg;
-	
+	private UDPClient udp = new UDPClient();
+	private ArrayList<String> recvPacket;
+	private JLabel ipLabel;
 	public FrameExam() {
 		setView();
-		JButton OrderBtn = new JButton("\uC8FC\uBB38");
-		OrderBtn.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent arg0) {
-				udpmsg.sendMsg("CALL to Store by client");
-				
+		udp.dataReceiver(); //여기서 패킷을 받기를 기다림
+		orderButton = new JButton("주문");
+		orderButton.setFont(new Font("돋움", Font.PLAIN, 12));
+		orderButton.setBounds(40, 94, 168, 134);
+
+		exitButton = new JButton("종료");
+		exitButton.setFont(new Font("돋움", Font.PLAIN, 12));
+		exitButton.addActionListener(e-> {System.exit(0);});
+		exitButton.setBounds(248, 94, 162, 134);
+
+		listener();
+		ipLabel = new JLabel("IP : " +udp.getInetAddress()+ " / UDP");
+		ipLabel.setBounds(49, 10, 326, 49);
+
+		contentPane.add(orderButton);
+		contentPane.add(exitButton);
+		contentPane.add(ipLabel);
+
+	}
+	private void listener() {
+		orderButton.addActionListener(e-> {
+			orderButton.setEnabled(false);
+			udp.sendMsg("CALL");
+			new Thread(()->{
+				try {
+					Thread.sleep(1500);
+				} catch (InterruptedException error) {
+					error.printStackTrace();
+				}
+				recvPacket = udp.getArrPacket();
+				for(int i=0;i<recvPacket.size();i++) {
+					udp.checkPacket(recvPacket.get(i));
+				}
 				orderFood.setVisible(true);
+				orderButton.setEnabled(true);
 				dispose();
-			}
+			}).start();
 		});
-		OrderBtn.setBounds(40, 94, 168, 134);
-		contentPane.add(OrderBtn);
-		
-		JButton exitBtn = new JButton("\uC885\uB8CC");
-		exitBtn.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent arg0) {
-//				dispose();
-				System.exit(0);
-			}
-		});
-		exitBtn.setBounds(248, 94, 162, 134);
-		contentPane.add(exitBtn);
-		
-		JLabel lblNewLabel = new JLabel("IP : " + " / UDP");
-		lblNewLabel.setBounds(49, 10, 326, 49);
-		contentPane.add(lblNewLabel);
-		
 	}
 	private void setView() {
+		setTitle("배달의 마왕");
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		setBounds(100, 100, 450, 300);
 		contentPane = new JPanel();
@@ -61,16 +64,9 @@ public class FrameExam extends JFrame {
 		setContentPane(contentPane);
 		contentPane.setLayout(null);
 	}
-	public static void main(String[] args) {
-		EventQueue.invokeLater(new Runnable() {
-			public void run() {
-				try {
-					FrameExam frame = new FrameExam();
-					frame.setVisible(true);
-				} catch (Exception e) {
-					e.printStackTrace();
-				}
-			}
-		});
-	}
+//	public static void main(String[] args) {
+//		FrameExam frameExam = new FrameExam();
+//		frameExam.setVisible(true);
+//	}
 }
+
