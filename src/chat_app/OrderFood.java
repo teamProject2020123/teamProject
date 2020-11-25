@@ -3,31 +3,33 @@ package chat_app;
 import javax.swing.*;
 import java.awt.TextArea;
 
-import javax.swing.DefaultComboBoxModel;
 import javax.swing.border.EmptyBorder;
 
+import java.awt.BorderLayout;
 import java.awt.Font;
 import java.awt.event.ActionListener;
+import java.net.DatagramPacket;
 import java.net.DatagramSocket;
+import java.net.InetAddress;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.awt.event.ActionEvent;
 
 public class OrderFood extends JFrame implements Runnable {
 
 	private JPanel contentPane;
-	private UDPClient udp;
-	private JButton orderButton,resetButton,backButton,cancelButton;
+	private JButton orderButton,resetButton,backButton,arriveButton;
 	private JComboBox<String> comboBox,comboBox1,comboBox2,comboBox3,cb;
 	private ArrayList<String> main,sub1,sub2,sub3,list,recv;
 	private TextArea needText;
 	private String packet;
-	@Override
-	public void run() {
-		
-	}
+
+	private InetAddress ip;
+	private DatagramSocket ds;
+	private Date time;
+
 	public OrderFood() {
-		udp = new UDPClient();
-		udp.dataReceiver();
 		main = new ArrayList<>();
 		sub1 = new ArrayList<>();
 		sub2 = new ArrayList<>();
@@ -42,14 +44,25 @@ public class OrderFood extends JFrame implements Runnable {
 		orderButton.setBounds(65, 200, 97, 23);
 		contentPane.add(orderButton);
 		actionListener();
+		
+        try {
+            ip = InetAddress.getByName("127.0.0.1");
+            ds = new DatagramSocket();
+        } catch (Exception e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+        
+        Thread th = new Thread(this);
+        th.start();
 	}
 	private void actionListener() {
 		orderButton.addActionListener(e-> {
 			list = new ArrayList<>();
-//			list.add(comboBox.getSelectedItem().toString() + "\n");
-//			list.add(comboBox1.getSelectedItem().toString() + "\n");
-//			list.add(comboBox2.getSelectedItem().toString() + "\n");
-//			list.add(comboBox3.getSelectedItem().toString() + "\n");
+			//			list.add(comboBox.getSelectedItem().toString() + "\n");
+			//			list.add(comboBox1.getSelectedItem().toString() + "\n");
+			//			list.add(comboBox2.getSelectedItem().toString() + "\n");
+			//			list.add(comboBox3.getSelectedItem().toString() + "\n");
 			list.add(comboBox.getSelectedItem().toString());
 			list.add(comboBox1.getSelectedItem().toString());
 			list.add(comboBox2.getSelectedItem().toString());
@@ -60,14 +73,13 @@ public class OrderFood extends JFrame implements Runnable {
 				list.add("No Description");
 			} else list.add(needText.getText());
 
-//			sendPacket = "ORDER\n"+list.get(0)+list.get(1)+list.get(2)+list.get(3)+list.get(4); //ORDER ~~
+			//			sendPacket = "ORDER\n"+list.get(0)+list.get(1)+list.get(2)+list.get(3)+list.get(4); //ORDER ~~
 			packet = "ORDER\n"+list.toString();
 
 			int result = JOptionPane.showConfirmDialog(null, "아래 내용이 맞나요?\n"
 					+ packet.substring(6) ,"CHECK_ORDER", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
 			if(result == JOptionPane.YES_OPTION) { //내용이 맞다고 확인 했을때
-				udp.sendMsg(packet);//처음에 order보내는부분
-				System.out.println("패킷 전송 성공");
+				sendMsg(packet);
 			}
 		});
 		listener();
@@ -100,10 +112,12 @@ public class OrderFood extends JFrame implements Runnable {
 		});
 		backButton.addActionListener(e-> {
 			dispose();
-			
+			ds.close();
+		});
+		arriveButton.addActionListener(e->{
+			sendMsg("TIME");
 		});
 	}
-
 	private void setView() {
 		setTitle("배달의 마왕 - 상세 주문");
 
@@ -168,10 +182,11 @@ public class OrderFood extends JFrame implements Runnable {
 		needText.setBounds(238, 81, 186, 94);
 		contentPane.add(needText);
 
-		cancelButton = new JButton("주문취소");
-		cancelButton.setFont(new Font("돋움", Font.PLAIN, 12));
-		cancelButton.setBounds(221, 200, 97, 23);
-		contentPane.add(cancelButton);
+		arriveButton = new JButton("도착시간");
+		arriveButton.setFont(new Font("돋움", Font.PLAIN, 12));
+		arriveButton.setBounds(221, 200, 97, 23);
+		contentPane.add(arriveButton);
+		arriveButton.setEnabled(false);
 
 		resetButton = new JButton("초기화");
 		resetButton.setFont(new Font("돋움", Font.PLAIN, 12));
@@ -188,7 +203,6 @@ public class OrderFood extends JFrame implements Runnable {
 		comboBox2.setModel(new DefaultComboBoxModel(sub2.toArray()));
 		comboBox3.setModel(new DefaultComboBoxModel(sub3.toArray()));
 	}
-
 	private void setPork() {
 		sub1.clear();
 		sub2.clear();
@@ -203,7 +217,6 @@ public class OrderFood extends JFrame implements Runnable {
 		sub2.add("Cider 1.5L");
 		sub3.add("No");
 	}
-
 	private void setPizza() {
 		sub1.clear();
 		sub2.clear();
@@ -217,7 +230,6 @@ public class OrderFood extends JFrame implements Runnable {
 		sub3.add("No");
 		sub3.add("Add Onion Source");
 	}
-
 	private void setChicken() {
 		sub1.clear();
 		sub2.clear();
@@ -230,6 +242,77 @@ public class OrderFood extends JFrame implements Runnable {
 		sub2.add("Cider 1.5L");
 		sub3.add("NO");
 		sub3.add("Add Hot Source");
+	}
+	private void setButtonOff() {
+		orderButton.setEnabled(false);
+		resetButton.setEnabled(false);
+		backButton.setEnabled(false);
+		arriveButton.setEnabled(true);
+		comboBox.setEnabled(false);
+		comboBox1.setEnabled(false);
+		comboBox2.setEnabled(false);
+		comboBox3.setEnabled(false);
+		needText.setEnabled(false);
+	}
+	
+	public void ArriveTime(String msg) {
+		int result = JOptionPane.showConfirmDialog(null, "도착예정시간\n"
+				+ msg ,"Arrive_Time", JOptionPane.CLOSED_OPTION, JOptionPane.QUESTION_MESSAGE);
+		if(result == JOptionPane.CLOSED_OPTION) { //내용이 맞다고 확인 했을때
+			dispose();
+		}
+	}
+	
+	@Override
+	public void run() {
+		while( true ) { 
+			byte[] buf = new byte[1024];
+			DatagramPacket packet = new DatagramPacket(buf, buf.length);
+			try {
+				ds.receive(packet);
+				String recvData = new String(packet.getData(), 0, packet.getLength());
+				receiveMsg(recvData);
+			} catch (Exception e) {
+				ds.close();
+				e.printStackTrace();
+				break;
+			} 
+		}
+	}
+
+	public void sendMsg(String msg) {
+		try {
+			byte[] buffer = msg.getBytes();
+			DatagramPacket dp = new DatagramPacket(buffer, buffer.length, ip, 1004);
+			ds.send(dp);		
+		} catch (Exception e) {
+			ds.close();
+			e.printStackTrace();
+		}
+	}
+	
+	public void receiveMsg(String msg) {
+		System.out.println(msg);
+		String[] msgArr = msg.split("\n");
+		switch(msgArr[0]) {
+		case "SUCCESS": 
+			System.out.println("주문 성공");
+			setButtonOff();
+			// 도착예정시간
+			break;
+		case "CANCEL":
+			System.out.println("주문 취소");
+			ds.close();
+			break;
+		case "TIME":
+			System.out.println("도착예정시간 : " + msgArr[1]);
+			ArriveTime(msgArr[1]);
+		}
+	}
+
+	public static void main(String[] args) {
+		OrderFood orderFood = new OrderFood();
+		orderFood.setVisible(true);
 	}
 
 }
