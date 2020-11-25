@@ -40,6 +40,7 @@ public class Store {
 					 * 3) [Client]보낸 패킷과 받은 패킷 비교하여 맞으면 ACK, 틀리면 ERROR 전송
 					 * 4) [Server]서버측에서 2번내용을 다시 전송(이때는 정상 패킷 보냄)
 					 * 5) [Client]클라이언트 측에서 비교해서 ACK 보냄.
+					 * dddd
 					*/ 
 					recvData = recvData.substring(6);
 					System.out.println("data : "+recvData);
