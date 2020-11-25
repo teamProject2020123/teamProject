@@ -12,7 +12,7 @@ import java.net.DatagramSocket;
 import java.util.ArrayList;
 import java.awt.event.ActionEvent;
 
-public class OrderFood extends JFrame {
+public class OrderFood extends JFrame implements Runnable {
 
 	private JPanel contentPane;
 	private UDPClient udp;
@@ -21,7 +21,10 @@ public class OrderFood extends JFrame {
 	private ArrayList<String> main,sub1,sub2,sub3,list,recv;
 	private TextArea needText;
 	private String packet;
-
+	@Override
+	public void run() {
+		
+	}
 	public OrderFood() {
 		udp = new UDPClient();
 		udp.dataReceiver();
@@ -64,29 +67,7 @@ public class OrderFood extends JFrame {
 					+ packet.substring(6) ,"CHECK_ORDER", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
 			if(result == JOptionPane.YES_OPTION) { //내용이 맞다고 확인 했을때
 				udp.sendMsg(packet);//처음에 order보내는부분
-				new Thread(()->{
-					int i =0;
-					while(true) {
-						try {
-							Thread.sleep(1000);
-						} catch (InterruptedException e1) {
-							// TODO Auto-generated catch block
-							e1.printStackTrace();
-						}
-						recv = udp.getArrPacket(); //체크패킷 읽어와서 이쪽에 저장
-						boolean isACKed = udp.checkPacket(packet,recv.get(i));
-						i++;
-						if(isACKed) break;
-					}
-					try {
-						Thread.sleep(1500);
-					} catch (InterruptedException e1) {
-						// TODO Auto-generated catch block
-						e1.printStackTrace();
-					}
-					JOptionPane.showMessageDialog(null, recv.get(i));
-					recv.clear();
-				}).start();
+				System.out.println("패킷 전송 성공");
 			}
 		});
 		listener();
@@ -118,9 +99,8 @@ public class OrderFood extends JFrame {
 			needText.setText("");
 		});
 		backButton.addActionListener(e-> {
-			FrameExam frameExam = new FrameExam();
-			frameExam.setVisible(true);
 			dispose();
+			
 		});
 	}
 

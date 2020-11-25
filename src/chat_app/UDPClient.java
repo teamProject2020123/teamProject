@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Date;
 
 public class UDPClient {
+	private static final int PORT = 1004;
 	private InetAddress ip;
 	private DatagramSocket ds;
 	private String result,recvData;
@@ -20,16 +21,14 @@ public class UDPClient {
 			ip = InetAddress.getByName("127.0.0.1");
 			ds = new DatagramSocket();
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		//		UDPClient udp = new UDPClient();
+
 	}
 	public void sendMsg(String msg) {
 		try {
 			byte[] buffer = msg.getBytes();
-			//			ip = InetAddress.getByName("172.18.15.143");
-			DatagramPacket dp = new DatagramPacket(buffer, buffer.length, ip, 1004);
+			DatagramPacket dp = new DatagramPacket(buffer, buffer.length, ip, PORT);
 			ds.send(dp);		
 		} catch (Exception e) {
 			ds.close();
