@@ -28,6 +28,8 @@ public class Store {
 //					sendPacket(dp.getAddress().toString()+"로 배달해주세요",dp);
 					sendPacket("SUCCESS",ds,dp);
 				}
+				else if(recvData.startsWith("TIME")) {
+				}
 			}
 		} catch (Exception e) {
 			ds.close();

@@ -3,9 +3,9 @@ package chat_app;
 import javax.swing.*;
 import java.awt.TextArea;
 
-import javax.swing.DefaultComboBoxModel;
 import javax.swing.border.EmptyBorder;
 
+import java.awt.BorderLayout;
 import java.awt.Font;
 import java.awt.event.ActionListener;
 import java.net.DatagramPacket;
@@ -113,6 +113,9 @@ public class OrderFood extends JFrame implements Runnable {
 		backButton.addActionListener(e-> {
 			dispose();
 			ds.close();
+		});
+		arriveButton.addActionListener(e->{
+			sendMsg("TIME");
 		});
 	}
 	private void setView() {
@@ -249,7 +252,15 @@ public class OrderFood extends JFrame implements Runnable {
 		comboBox1.setEnabled(false);
 		comboBox2.setEnabled(false);
 		comboBox3.setEnabled(false);
-		cb.setEnabled(false);
+		needText.setEnabled(false);
+	}
+	
+	public void ArriveTime(String msg) {
+		int result = JOptionPane.showConfirmDialog(null, "도착예정시간\n"
+				+ msg ,"Arrive_Time", JOptionPane.CLOSED_OPTION, JOptionPane.QUESTION_MESSAGE);
+		if(result == JOptionPane.CLOSED_OPTION) { //내용이 맞다고 확인 했을때
+			dispose();
+		}
 	}
 	
 	@Override
@@ -295,6 +306,7 @@ public class OrderFood extends JFrame implements Runnable {
 			break;
 		case "TIME":
 			System.out.println("도착예정시간 : " + msgArr[1]);
+			ArriveTime(msgArr[1]);
 		}
 	}
 
