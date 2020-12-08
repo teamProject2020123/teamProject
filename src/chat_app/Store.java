@@ -1,27 +1,41 @@
 package chat_app;
 import java.awt.Font;
 import java.io.IOException;
-import java.net.*;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
+import java.net.SocketException;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
 
-import javax.swing.*;
+import javax.swing.DefaultListModel;
+import javax.swing.JButton;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JList;
+import javax.swing.JPanel;
 import javax.swing.border.EmptyBorder;
 
 public class Store extends JFrame{
 	private DatagramSocket ds;
 	private DefaultListModel model = new DefaultListModel();
 	private ArrayList<String> data = new ArrayList<>();
+	private HashMap<Integer, String> map = new HashMap<Integer, String>();
+	Set<Entry<Integer, String>> entries;
 	private int orderSeq;
 	private static final String DEST_IP = "127.0.0.1";
-	//	private static final int DEST_PORT;
 	private int port;
 	private byte[] buffer;
 	private JPanel contentPane;
 	private JList<String> list;
-	private int count =0;
+	private int count =1;
 	private JButton btn1,btn2,btn3,btn4;
 	public Store() {
 		setView();
+		entries = map.entrySet();
 		orderSeq=0;
 		try {
 			ds = new DatagramSocket(1004);
@@ -41,9 +55,8 @@ public class Store extends JFrame{
 				port=dp.getPort();
 				String recvData = new String(dp.getData(), 0, dp.getLength());
 				if(recvData.startsWith("ORDER")) {
-					//					System.out.println("[Client->Server] : "+recvData);
 					System.out.println("====================================");
-					data.add(recvData.substring(6));
+					map.put(count, recvData.substring(6)); //HashMap에 Order 내용 추가
 					updateList();
 					sendMsg("SUCCESS\nTIME=5");
 					sendMsg("ORDER_NUMBER="+(++orderSeq));
@@ -52,8 +65,7 @@ public class Store extends JFrame{
 				} else if(recvData.startsWith("CANCEL")) {
 					int num = Integer.parseInt(recvData.substring(7));
 					System.out.println("ordernumber = "+num);
-//					data.remove(orderNumber);
-					cancelOrder(num-1);
+					cancelOrder(num);
 					sendMsg("CANCEL_OK");
 				}
 			}
@@ -63,12 +75,23 @@ public class Store extends JFrame{
 		}
 	}
 	private void cancelOrder(int n) {
-		model.remove(n);
-		model.add(n, "CANCELED ORDER");
-		list.setModel(model);
+		int key=0;
+		//삭제요청 들어오면 먼저, 해당하는 번호를 찾는다
+		for(int i=0;i<model.getSize();i++) {
+			String msg = (String) model.getElementAt(i);
+			String arr[] = msg.split("번");
+			key = Integer.parseInt(arr[0]);
+			if(n==key) {
+				//삭제하도록
+				map.remove(n); //oderSeq 에 맞는 HashMap 데이터 삭제
+				model.remove(i); //리스트에 보이는건 다를 수있다... -> 별도의 카운트 생성?
+				list.setModel(model);
+				break;
+			}
+		}
 	}
 	private void updateList() {
-		model.addElement(count+1+": "+data.get(count));
+		model.addElement(count+"번: "+map.get(count));
 		list.setModel(model);
 		count++;
 	}
@@ -123,8 +146,6 @@ public class Store extends JFrame{
 	public static void main(String[] args) {
 		Store store = new Store();
 		store.setVisible(true);
-//		OrderFood orderFood = new OrderFood();
-//		orderFood.setVisible(true);
 		store.recvPacket();
 	}
 
