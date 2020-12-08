@@ -105,7 +105,8 @@ public class OrderFood extends JFrame implements Runnable {
 					,"CHECK_CANCEL", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
 			if(result == JOptionPane.YES_OPTION) {
 				sendMsg("CANCEL="+myOrderSeq);
-				enableBtn();
+				System.exit(0);
+//				enableBtn();
 			}
 		});
 		arriveButton.addActionListener(e->{
