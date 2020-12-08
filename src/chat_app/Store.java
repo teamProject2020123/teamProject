@@ -1,7 +1,5 @@
 package chat_app;
 import java.awt.Font;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.io.IOException;
 import java.net.*;
 import java.util.ArrayList;
@@ -11,23 +9,28 @@ import javax.swing.border.EmptyBorder;
 
 public class Store extends JFrame{
 	private DatagramSocket ds;
-	private DefaultListModel model = new DefaultListModel();;
+	private DefaultListModel model = new DefaultListModel();
 	private ArrayList<String> data = new ArrayList<>();
+	private int orderSeq;
 	private static final String DEST_IP = "127.0.0.1";
-	private static final int DEST_PORT = 1004;
+	//	private static final int DEST_PORT;
+	private int port;
 	private byte[] buffer;
 	private JPanel contentPane;
-	private JTextField textField;
-	private JList list;
+	private JList<String> list;
 	private int count =0;
-	private JButton btnNewButton,btnNewButton_1,btnNewButton_2,btnNewButton_3;
+	private JButton btn1,btn2,btn3,btn4;
 	public Store() {
 		setView();
+		orderSeq=0;
 		try {
 			ds = new DatagramSocket(1004);
 		} catch (SocketException e) {
 			e.printStackTrace();
 		}
+	}
+	public int getOrderNumber() {
+		return orderSeq;
 	}
 	private void recvPacket() {
 		try {
@@ -35,11 +38,23 @@ public class Store extends JFrame{
 				buffer = new byte[1024];
 				DatagramPacket dp = new DatagramPacket(buffer, buffer.length);
 				ds.receive(dp);
+				port=dp.getPort();
 				String recvData = new String(dp.getData(), 0, dp.getLength());
 				if(recvData.startsWith("ORDER")) {
+					//					System.out.println("[Client->Server] : "+recvData);
+					System.out.println("====================================");
 					data.add(recvData.substring(6));
 					updateList();
-					sendMsg("OK");
+					sendMsg("SUCCESS\nTIME=5");
+					sendMsg("ORDER_NUMBER="+(++orderSeq));
+				} else if(recvData.equals("TIME")) {
+					sendMsg("TIME TO ARRIVE=5");
+				} else if(recvData.startsWith("CANCEL")) {
+					int num = Integer.parseInt(recvData.substring(7));
+					System.out.println("ordernumber = "+num);
+//					data.remove(orderNumber);
+					cancelOrder(num-1);
+					sendMsg("CANCEL_OK");
 				}
 			}
 		} catch (Exception e) {
@@ -47,17 +62,23 @@ public class Store extends JFrame{
 			e.printStackTrace();
 		}
 	}
+	private void cancelOrder(int n) {
+		model.remove(n);
+		model.add(n, "CANCELED ORDER");
+		list.setModel(model);
+	}
 	private void updateList() {
 		model.addElement(count+1+": "+data.get(count));
 		list.setModel(model);
 		count++;
 	}
+
 	private void sendMsg(String data) throws IOException {
 		String msg = data;
 		byte[] buffer = msg.getBytes();
-		DatagramPacket dp = new DatagramPacket(buffer,buffer.length,InetAddress.getByName(DEST_IP),DEST_PORT);
+		DatagramPacket dp = new DatagramPacket(buffer,buffer.length,InetAddress.getByName(DEST_IP),port);
 		ds.send(dp);		
-		System.out.println("Server : "+msg);
+		System.out.println("[Server -> Client] : "+msg);
 	}
 	private void setView() {
 		setTitle("Store");
@@ -69,41 +90,41 @@ public class Store extends JFrame{
 		setContentPane(contentPane);
 		contentPane.setLayout(null);
 
-		JLabel lblNewLabel = new JLabel("\uC8FC\uBB38 \uB0B4\uC5ED");
-		lblNewLabel.setFont(new Font("µ∏øÚ", Font.PLAIN, 12));
+		JLabel lblNewLabel = new JLabel("Store");
+		lblNewLabel.setFont(new Font("ÎèãÏõÄ", Font.PLAIN, 12));
 		lblNewLabel.setBounds(105, 10, 57, 15);
 		contentPane.add(lblNewLabel);
-		
+
 		list = new JList(data.toArray());
 		list.setBounds(31, 25, 300, 205);
 		getContentPane().add(list);
 
-		btnNewButton = new JButton("1");
-		btnNewButton.setFont(new Font("µ∏øÚ", Font.PLAIN, 12));
-		btnNewButton.setBounds(350, 25, 50, 23);
-		contentPane.add(btnNewButton);
+		btn1 = new JButton("1");
+		btn1.setFont(new Font("ÎèãÏõÄ", Font.PLAIN, 12));
+		btn1.setBounds(350, 25, 50, 23);
+		contentPane.add(btn1);
 
-		btnNewButton_1 = new JButton("2");
-		btnNewButton_1.setFont(new Font("µ∏øÚ", Font.PLAIN, 12));
-		btnNewButton_1.setBounds(350, 85, 50, 23);
-		contentPane.add(btnNewButton_1);
+		btn2 = new JButton("2");
+		btn2.setFont(new Font("ÎèãÏõÄ", Font.PLAIN, 12));
+		btn2.setBounds(350, 85, 50, 23);
+		contentPane.add(btn2);
 
-		btnNewButton_2 = new JButton("3");
-		btnNewButton_2.setFont(new Font("µ∏øÚ", Font.PLAIN, 12));
-		btnNewButton_2.setBounds(350, 145, 50, 23);
-		contentPane.add(btnNewButton_2);
+		btn3 = new JButton("3");
+		btn3.setFont(new Font("ÎèãÏõÄ", Font.PLAIN, 12));
+		btn3.setBounds(350, 145, 50, 23);
+		contentPane.add(btn3);
 
-		btnNewButton_3 = new JButton("4");
-		btnNewButton_3.setFont(new Font("µ∏øÚ", Font.PLAIN, 12));
-		btnNewButton_3.setBounds(350, 205, 50, 23);
-		contentPane.add(btnNewButton_3);
+		btn4 = new JButton("4");
+		btn4.setFont(new Font("ÎèãÏõÄ", Font.PLAIN, 12));
+		btn4.setBounds(350, 205, 50, 23);
+		contentPane.add(btn4);
 	}
 
 	public static void main(String[] args) {
 		Store store = new Store();
 		store.setVisible(true);
-		OrderFood orderFood = new OrderFood();
-		orderFood.setVisible(true);
+//		OrderFood orderFood = new OrderFood();
+//		orderFood.setVisible(true);
 		store.recvPacket();
 	}
 
