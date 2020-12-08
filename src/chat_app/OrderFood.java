@@ -298,8 +298,7 @@ public class OrderFood extends JFrame implements Runnable {
 			System.out.println("내 주문 번호는 : "+myOrderSeq);
 		} else if(recvData.startsWith("TIME")) {
 			String temp[] = recvData.split("=");
-			JOptionPane.showMessageDialog(this, "고객님, "+temp[1]+"분 정도 더 걸립니다..","시간 알림",
-					JOptionPane.INFORMATION_MESSAGE);
+			ArriveTime(temp[1]);
 		} else if(recvData.startsWith("CANCEL")) {
 			JOptionPane.showMessageDialog(this, "주문하신 메뉴가 취소되었습니다.","취소알림",
 					JOptionPane.INFORMATION_MESSAGE);
