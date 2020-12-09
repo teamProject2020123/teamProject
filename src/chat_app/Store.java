@@ -61,12 +61,16 @@ public class Store extends JFrame{
 				String recvData = new String(dp.getData(), 0, dp.getLength());
 				if(recvData.startsWith("ORDER")) {
 					System.out.println("====================================");
-					map.put(count, recvData.substring(6)); //HashMap에 Order 내용 추가
-					updateList();
-					sendMsg("SUCCESS\nTIME=5");
-					sendMsg("ORDER_NUMBER="+(++orderSeq));	
-					setTime();
-				}
+					if(map.size()<3) {
+						map.put(count, recvData.substring(6)); //HashMap에 Order 내용 추가
+						updateList();
+						sendMsg("SUCCESS");
+						sendMsg("ORDER_NUMBER="+(++orderSeq));	
+						setTime();						
+					} else {
+						sendMsg("FAILED");
+					}
+				} 
 				else if(recvData.startsWith("TIME")) {
 					getTime();
 					sendMsg("TIME="+(deliverTime - timer));
@@ -93,8 +97,8 @@ public class Store extends JFrame{
 			key = Integer.parseInt(arr[0]);
 			if(n==key) {
 				//삭제하도록
-				map.remove(n); //oderSeq 에 맞는 HashMap 데이터 삭제
-				model.remove(i); //리스트에 보이는건 다를 수있다... -> 별도의 카운트 생성?
+				map.remove(n); 
+				model.remove(i); 
 				list.setModel(model);
 				break;
 			}
@@ -162,11 +166,9 @@ public class Store extends JFrame{
 
 	private void getTime() {
 
-		System.out.println(timer);
 		LocalDateTime checkPoint = LocalDateTime.now();
 		int m_Hour = hour - checkPoint.getHour();
 		int m_Minute = minute - checkPoint.getMinute();	
-		System.out.println(hour+":"+minute+ " " + m_Hour+":"+m_Minute);
 
 		if(m_Hour == 0) {
 			timer = -m_Minute;
