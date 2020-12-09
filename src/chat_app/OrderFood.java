@@ -5,6 +5,7 @@ import java.awt.TextArea;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 
 import javax.swing.DefaultComboBoxModel;
@@ -35,6 +36,8 @@ public class OrderFood extends JFrame implements Runnable {
 	private InetAddress ip;
 	private DatagramSocket ds;
 	private boolean cancel = true;
+	
+	private int hour,min;
 
 	public OrderFood() {
 		main = new ArrayList<>();
@@ -46,8 +49,8 @@ public class OrderFood extends JFrame implements Runnable {
 		main.add("Pork");
 		setView();
 //		setChicken();
-		orderButton = new JButton("ÁÖ¹®ÇÏ±â");
-		orderButton.setFont(new Font("µ¸¿ò", Font.PLAIN, 12));
+		orderButton = new JButton("ï¿½Ö¹ï¿½ï¿½Ï±ï¿½");
+		orderButton.setFont(new Font("ï¿½ï¿½ï¿½ï¿½", Font.PLAIN, 12));
 		orderButton.setBounds(65, 200, 97, 23);
 		contentPane.add(orderButton);
 		actionListener();
@@ -67,9 +70,10 @@ public class OrderFood extends JFrame implements Runnable {
 	private void actionListener() {
 		orderButton.addActionListener(e-> {
 			parsingJson();
-			int result = JOptionPane.showConfirmDialog(null, "ÁÖ¹®ÇÏ½Ã°Ú½À´Ï±î?"
+			int result = JOptionPane.showConfirmDialog(null, "ï¿½Ö¹ï¿½ï¿½Ï½Ã°Ú½ï¿½ï¿½Ï±ï¿½?"
 					,"CHECK_ORDER", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
-			if(result == JOptionPane.YES_OPTION) { //³»¿ëÀÌ ¸Â´Ù°í È®ÀÎ ÇßÀ»¶§
+			if(result == JOptionPane.YES_OPTION) { //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Â´Ù°ï¿½ È®ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+				getOrderTime();
 				sendMsg(packet);
 			}
 		});
@@ -103,7 +107,7 @@ public class OrderFood extends JFrame implements Runnable {
 			needText.setText("");
 		});
 		cancelButton.addActionListener(e-> {
-			int result = JOptionPane.showConfirmDialog(null, "Á¤¸» ÁÖ¹®À» Ãë¼ÒÇÏ½Ã°Ú½À´Ï±î?"
+			int result = JOptionPane.showConfirmDialog(null, "ï¿½ï¿½ï¿½ï¿½ ï¿½Ö¹ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½Ï½Ã°Ú½ï¿½ï¿½Ï±ï¿½?"
 					,"CHECK_CANCEL", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
 			if(result == JOptionPane.YES_OPTION) {
 				sendMsg("CANCEL="+myOrderSeq);
@@ -117,7 +121,7 @@ public class OrderFood extends JFrame implements Runnable {
 					if(cancel) {
 						System.exit(0);											
 					} else {
-						JOptionPane.showMessageDialog(this, "¿ä¸®°¡ ÀÌ¹Ì ½ÃÀÛµÆ±â ¶§¹®¿¡ ÁÖ¹®À» Ãë¼ÒÇÏ½Ç ¼ö ¾ø½À´Ï´Ù.","½ÇÆÐ¾Ë¸²",
+						JOptionPane.showMessageDialog(this, "ï¿½ä¸®ï¿½ï¿½ ï¿½Ì¹ï¿½ ï¿½ï¿½ï¿½ÛµÆ±ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ö¹ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½Ï½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ï´ï¿½.","ï¿½ï¿½ï¿½Ð¾Ë¸ï¿½",
 								JOptionPane.CANCEL_OPTION);
 					}
 				}).start();
@@ -125,7 +129,7 @@ public class OrderFood extends JFrame implements Runnable {
 			}
 		});
 		arriveButton.addActionListener(e->{
-			sendMsg("TIME");
+			sendMsg("TIME="+hour+":"+min+":"+comboBox[0].getSelectedItem().toString());
 		});
 	}
 	private void parsingJson() {
@@ -147,7 +151,7 @@ public class OrderFood extends JFrame implements Runnable {
 		packet = "ORDER\n" + gson.toJson(menu);
 	}
 	private void setView() {
-		setTitle("¹è´ÞÀÇ ¸¶¿Õ - »ó¼¼ ÁÖ¹®");
+		setTitle("ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ - ï¿½ï¿½ ï¿½Ö¹ï¿½");
 
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		setBounds(100, 100, 450, 300);
@@ -156,23 +160,23 @@ public class OrderFood extends JFrame implements Runnable {
 		setContentPane(contentPane);
 		contentPane.setLayout(null);
 
-		mainLabel = new JLabel("¸ÞÀÎ ¸Þ´º");
-		mainLabel.setFont(new Font("µ¸¿ò", Font.PLAIN, 12));
+		mainLabel = new JLabel("ï¿½ï¿½ï¿½ï¿½ ï¿½Þ´ï¿½");
+		mainLabel.setFont(new Font("ï¿½ï¿½ï¿½ï¿½", Font.PLAIN, 12));
 		mainLabel.setBounds(12, 50, 57, 15);
 		contentPane.add(mainLabel);
 
-		optionLabel1 = new JLabel("Ãß°¡ ¿É¼Ç1");
-		optionLabel1.setFont(new Font("µ¸¿ò", Font.PLAIN, 12));
+		optionLabel1 = new JLabel("ï¿½ß°ï¿½ ï¿½É¼ï¿½1");
+		optionLabel1.setFont(new Font("ï¿½ï¿½ï¿½ï¿½", Font.PLAIN, 12));
 		optionLabel1.setBounds(12, 85, 70, 15);
 		contentPane.add(optionLabel1);
 
-		optionLabel2 = new JLabel("Ãß°¡ ¿É¼Ç2");
-		optionLabel2.setFont(new Font("µ¸¿ò", Font.PLAIN, 12));
+		optionLabel2 = new JLabel("ï¿½ß°ï¿½ ï¿½É¼ï¿½2");
+		optionLabel2.setFont(new Font("ï¿½ï¿½ï¿½ï¿½", Font.PLAIN, 12));
 		optionLabel2.setBounds(12, 120, 70, 15);
 		contentPane.add(optionLabel2);
 
-		optionLabel3 = new JLabel("Ãß°¡ ¿É¼Ç3");
-		optionLabel3.setFont(new Font("µ¸¿ò", Font.PLAIN, 12));
+		optionLabel3 = new JLabel("ï¿½ß°ï¿½ ï¿½É¼ï¿½3");
+		optionLabel3.setFont(new Font("ï¿½ï¿½ï¿½ï¿½", Font.PLAIN, 12));
 		optionLabel3.setBounds(12, 155, 70, 15);
 		contentPane.add(optionLabel3);
 
@@ -180,31 +184,31 @@ public class OrderFood extends JFrame implements Runnable {
 		
 		comboBox[0] = new JComboBox(main.toArray());
 		comboBox[0].setBounds(92, 45, 138, 23);
-		comboBox[0].setFont(new Font("µ¸¿ò",Font.PLAIN,12));
+		comboBox[0].setFont(new Font("ï¿½ï¿½ï¿½ï¿½",Font.PLAIN,12));
 		contentPane.add(comboBox[0]);
 
 		comboBox[1] = new JComboBox(option1.toArray());
 		comboBox[1].setBounds(92, 80, 138, 23);
-		comboBox[1].setFont(new Font("µ¸¿ò",Font.PLAIN,12));
+		comboBox[1].setFont(new Font("ï¿½ï¿½ï¿½ï¿½",Font.PLAIN,12));
 		contentPane.add(comboBox[1]);
 
 		comboBox[2] = new JComboBox(option2.toArray());
 		comboBox[2].setBounds(92, 115, 138, 23);
-		comboBox[2].setFont(new Font("µ¸¿ò",Font.PLAIN,12));
+		comboBox[2].setFont(new Font("ï¿½ï¿½ï¿½ï¿½",Font.PLAIN,12));
 		contentPane.add(comboBox[2]);
 
 		comboBox[3] = new JComboBox(option3.toArray());
 		comboBox[3].setBounds(92, 150, 138, 23);
-		comboBox[3].setFont(new Font("µ¸¿ò",Font.PLAIN,12));
+		comboBox[3].setFont(new Font("ï¿½ï¿½ï¿½ï¿½",Font.PLAIN,12));
 		contentPane.add(comboBox[3]);
 
-		JLabel lblNewLabel_3 = new JLabel("ÁÖ¹®½Ã Ãß°¡ ¿ä±¸»çÇ×");
-		lblNewLabel_3.setFont(new Font("µ¸¿ò", Font.PLAIN, 12));
+		JLabel lblNewLabel_3 = new JLabel("ï¿½Ö¹ï¿½ï¿½ï¿½ ï¿½ß°ï¿½ ï¿½ä±¸ï¿½ï¿½ï¿½ï¿½");
+		lblNewLabel_3.setFont(new Font("ï¿½ï¿½ï¿½ï¿½", Font.PLAIN, 12));
 		lblNewLabel_3.setBounds(242, 50, 118, 15);
 		contentPane.add(lblNewLabel_3);
 
-		JLabel lblNewLabel_4 = new JLabel("¹«¾ùÀ» µµ¿Íµå¸±±î¿ä?");
-		lblNewLabel_4.setFont(new Font("µ¸¿ò", Font.PLAIN, 12));
+		JLabel lblNewLabel_4 = new JLabel("ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Íµå¸±ï¿½ï¿½ï¿½?");
+		lblNewLabel_4.setFont(new Font("ï¿½ï¿½ï¿½ï¿½", Font.PLAIN, 12));
 		lblNewLabel_4.setBounds(147, 10, 163, 15);
 		contentPane.add(lblNewLabel_4);
 
@@ -212,19 +216,19 @@ public class OrderFood extends JFrame implements Runnable {
 		needText.setBounds(238, 81, 186, 94);
 		contentPane.add(needText);
 
-		arriveButton = new JButton("µµÂø½Ã°£");
-		arriveButton.setFont(new Font("µ¸¿ò", Font.PLAIN, 12));
+		arriveButton = new JButton("ï¿½ï¿½ï¿½ï¿½ï¿½Ã°ï¿½");
+		arriveButton.setFont(new Font("ï¿½ï¿½ï¿½ï¿½", Font.PLAIN, 12));
 		arriveButton.setBounds(221, 200, 97, 23);
 		contentPane.add(arriveButton);
 		arriveButton.setEnabled(false);
 
-		resetButton = new JButton("ÃÊ±âÈ­");
-		resetButton.setFont(new Font("µ¸¿ò", Font.PLAIN, 12));
+		resetButton = new JButton("ï¿½Ê±ï¿½È­");
+		resetButton.setFont(new Font("ï¿½ï¿½ï¿½ï¿½", Font.PLAIN, 12));
 		resetButton.setBounds(65, 228, 97, 23);
 		contentPane.add(resetButton);
 
-		cancelButton = new JButton("ÁÖ¹®Ãë¼Ò");
-		cancelButton.setFont(new Font("µ¸¿ò", Font.PLAIN, 12));
+		cancelButton = new JButton("ï¿½Ö¹ï¿½ï¿½ï¿½ï¿½");
+		cancelButton.setFont(new Font("ï¿½ï¿½ï¿½ï¿½", Font.PLAIN, 12));
 		cancelButton.setBounds(221, 228, 97, 23);
 		contentPane.add(cancelButton);
 		cancelButton.setEnabled(false);
@@ -241,8 +245,8 @@ public class OrderFood extends JFrame implements Runnable {
 		option1.clear();
 		option2.clear();
 		option3.clear();
-		optionLabel1.setText("¸Ê±â");
-		optionLabel2.setText("À½·á");
+		optionLabel1.setText("ï¿½Ê±ï¿½");
+		optionLabel2.setText("ï¿½ï¿½ï¿½ï¿½");
 		optionLabel3.setText("");
 		option1.add("Normal");
 		option1.add("No Hot");
@@ -259,8 +263,8 @@ public class OrderFood extends JFrame implements Runnable {
 		option1.clear();
 		option2.clear();
 		option3.clear();
-		optionLabel1.setText("ÅäÇÎ");
-		optionLabel2.setText("À½·á");
+		optionLabel1.setText("ï¿½ï¿½ï¿½ï¿½");
+		optionLabel2.setText("ï¿½ï¿½ï¿½ï¿½");
 		option1.add("Normal");
 		option1.add("Cheese Crust");
 		option2.add("Coke 500ml");
@@ -275,9 +279,9 @@ public class OrderFood extends JFrame implements Runnable {
 		option1.clear();
 		option2.clear();
 		option3.clear();
-		optionLabel1.setText("»À,¼ø»ì ¼±ÅÃ");
-		optionLabel2.setText("À½·á");
-		optionLabel3.setText("¼Ò½º Ãß°¡");
+		optionLabel1.setText("ï¿½ï¿½,ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½");
+		optionLabel2.setText("ï¿½ï¿½ï¿½ï¿½");
+		optionLabel3.setText("ï¿½Ò½ï¿½ ï¿½ß°ï¿½");
 		option1.add("Boneless");
 		option1.add("Bone");
 		option2.add("Coke 500ml");
@@ -311,9 +315,9 @@ public class OrderFood extends JFrame implements Runnable {
 	}
 	
 	public void ArriveTime(String msg) {
-		int result = JOptionPane.showConfirmDialog(null, "µµÂø¿¹Á¤½Ã°£Àº "
-				+ msg +"ºÐ ÀÔ´Ï´Ù.","Arrive_Time", JOptionPane.CLOSED_OPTION, JOptionPane.QUESTION_MESSAGE);
-		if(result == JOptionPane.CLOSED_OPTION) { //³»¿ëÀÌ ¸Â´Ù°í È®ÀÎ ÇßÀ»¶§
+		int result = JOptionPane.showConfirmDialog(null, "ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã°ï¿½ï¿½ï¿½ "
+				+ msg +"ï¿½ï¿½ ï¿½Ô´Ï´ï¿½.","Arrive_Time", JOptionPane.CLOSED_OPTION, JOptionPane.QUESTION_MESSAGE);
+		if(result == JOptionPane.CLOSED_OPTION) { //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Â´Ù°ï¿½ È®ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 			dispose();
 		}
 	}
@@ -336,7 +340,7 @@ public class OrderFood extends JFrame implements Runnable {
 	}
 	private void recvMsg(String recvData) {
 		if(recvData.startsWith("SUCCESS")) {
-			JOptionPane.showMessageDialog(this, "ÁÖ¹®ÀÌ Á¢¼öµÇ¾ú½À´Ï´Ù.");
+			JOptionPane.showMessageDialog(this, "ï¿½Ö¹ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ç¾ï¿½ï¿½ï¿½ï¿½Ï´ï¿½.");
 			disableBtn();
 		} else if(recvData.startsWith("ORDER_NUMBER")) {
 			recvData = recvData.substring(11);
@@ -346,12 +350,12 @@ public class OrderFood extends JFrame implements Runnable {
 			String temp[] = recvData.split("=");
 			ArriveTime(temp[1]);
 		} else if(recvData.startsWith("CANCEL_OK")) {
-			JOptionPane.showMessageDialog(this, "ÁÖ¹®ÇÏ½Å ¸Þ´º°¡ Ãë¼ÒµÇ¾ú½À´Ï´Ù.","Ãë¼Ò¾Ë¸²",
+			JOptionPane.showMessageDialog(this, "ï¿½Ö¹ï¿½ï¿½Ï½ï¿½ ï¿½Þ´ï¿½ï¿½ï¿½ ï¿½ï¿½ÒµÇ¾ï¿½ï¿½ï¿½ï¿½Ï´ï¿½.","ï¿½ï¿½Ò¾Ë¸ï¿½",
 					JOptionPane.INFORMATION_MESSAGE);
 		} else if(recvData.startsWith("CANCEL_FAIL")) {
 			cancel = false;
 		} else if(recvData.startsWith("FAIL")) {
-			JOptionPane.showMessageDialog(this, "ÁÖ¹®ÀÌ ¹Ð·ÁÀÖ¾î ¾ÈµË´Ï´Ù.","½ÇÆÐ ¾Ë¸²",
+			JOptionPane.showMessageDialog(this, "ï¿½Ö¹ï¿½ï¿½ï¿½ ï¿½Ð·ï¿½ï¿½Ö¾ï¿½ ï¿½ÈµË´Ï´ï¿½.","ï¿½ï¿½ï¿½ï¿½ ï¿½Ë¸ï¿½",
 					JOptionPane.CANCEL_OPTION);
 		}
 	}
@@ -366,6 +370,12 @@ public class OrderFood extends JFrame implements Runnable {
 			ds.close();
 			e.printStackTrace();
 		}
+	}
+	
+	private void getOrderTime() {
+		LocalDateTime timePoint = LocalDateTime.now();
+		hour = timePoint.getHour();
+		min = timePoint.getMinute();		
 	}
 	public static void main(String[] args) {
 		OrderFood orderFood = new OrderFood();

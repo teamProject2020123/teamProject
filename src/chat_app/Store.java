@@ -34,7 +34,7 @@ public class Store extends JFrame{
 	private JList<String> list;
 	private int count =1;
 	private JButton btn1,btn2,btn3,btn4;
-	private int hour, minute, deliverTime;
+	private int deliverTime;
 	private final int CHICKEN_TIME = 10;
 	private final int PIZZA_TIME = 12;
 	private final int PORK_TIME = 15;
@@ -68,8 +68,7 @@ public class Store extends JFrame{
 						map.put(count, parsingJson(recvData)); //HashMap에 Order 내용 추가
 						updateList();
 						sendMsg("SUCCESS");
-						sendMsg("ORDER_NUMBER="+(++orderSeq));	
-						setTime();						
+						sendMsg("ORDER_NUMBER="+(++orderSeq));					
 					} else {
 						//주문 시간에 추가되도록 해야함
 						
@@ -77,7 +76,16 @@ public class Store extends JFrame{
 					}
 				} 
 				else if(recvData.startsWith("TIME")) {
-					getTime();
+					String[] arr = recvData.substring(5).split(":");		
+					System.out.println(arr[2]);
+					getTime(Integer.parseInt(arr[0]),Integer.parseInt(arr[1]));				
+					if(arr[2].equals("Chicken")) {
+						deliverTime = CHICKEN_TIME;
+					} else if(arr[2].equals("Pizza")) {
+						deliverTime = PIZZA_TIME;				
+					} else if(arr[2].equals("Pork")){
+						deliverTime = PORK_TIME;				
+					}
 					sendMsg("TIME="+(deliverTime - timer));
 
 				} else if(recvData.startsWith("CANCEL")) {
@@ -100,14 +108,14 @@ public class Store extends JFrame{
 		Gson gson = new Gson();
 		Menu menu = gson.fromJson(recvData,Menu.class);
 		String orderList = menu.main;
-		if(menu.main.equals("Chicken")) {
-			deliverTime = CHICKEN_TIME;
+		if(menu.main.equals("Chicken")) {	
+			deliverTime = CHICKEN_TIME;	
 			cookTime = CHICKEN_TIME * 0.8f;
 		} else if(menu.main.equals("Pizza")) {
-			deliverTime = PIZZA_TIME;
+			deliverTime = PIZZA_TIME;	
 			cookTime = PIZZA_TIME * 0.8f;
 		} else {
-			deliverTime = PORK_TIME;
+			deliverTime = PORK_TIME;	
 			cookTime = PORK_TIME * 0.8f;
 		}
 		if(!menu.sub1.isEmpty()) orderList += ","+menu.sub1;
@@ -185,14 +193,8 @@ public class Store extends JFrame{
 		contentPane.add(btn4);
 
 	}
-
-	private void setTime() {
-		LocalDateTime timePoint = LocalDateTime.now();
-		hour = timePoint.getHour();
-		minute = timePoint.getMinute();	
-	}
-
-	private void getTime() {
+	
+	private void getTime(int hour, int minute) {
 		LocalDateTime checkPoint = LocalDateTime.now();
 		int m_Hour = hour - checkPoint.getHour();
 		int m_Minute = minute - checkPoint.getMinute();	
