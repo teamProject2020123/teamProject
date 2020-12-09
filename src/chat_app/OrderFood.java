@@ -1,16 +1,22 @@
 package chat_app;
 
-import javax.swing.*;
-import java.awt.TextArea;
-
-import javax.swing.border.EmptyBorder;
-
 import java.awt.Font;
+import java.awt.TextArea;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.util.ArrayList;
-import java.util.Date;
+
+import javax.swing.DefaultComboBoxModel;
+import javax.swing.JButton;
+import javax.swing.JComboBox;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.border.EmptyBorder;
+
+import com.google.gson.Gson;
 
 public class OrderFood extends JFrame implements Runnable {
 
@@ -19,29 +25,32 @@ public class OrderFood extends JFrame implements Runnable {
 	private int myOrderSeq;
 	private JPanel contentPane;
 	private JButton orderButton,resetButton,cancelButton,arriveButton;
-	private JComboBox<String> comboBox,comboBox1,comboBox2,comboBox3,cb;
-	private ArrayList<String> main,sub1,sub2,sub3,list;
+	private JComboBox<String> cb;
+	private JComboBox<String>[] comboBox = new JComboBox[4];
+	private ArrayList<String> main,option1,option2,option3,list;
+	private JLabel mainLabel,optionLabel1,optionLabel2,optionLabel3;
 	private TextArea needText;
+	private Menu menu;
 	private String packet;
 	private InetAddress ip;
 	private DatagramSocket ds;
+	private boolean cancel = true;
 
 	public OrderFood() {
 		main = new ArrayList<>();
-		sub1 = new ArrayList<>();
-		sub2 = new ArrayList<>();
-		sub3 = new ArrayList<>();
+		option1 = new ArrayList<>();
+		option2 = new ArrayList<>();
+		option3 = new ArrayList<>();
 		main.add("Chicken");
 		main.add("Pizza");
 		main.add("Pork");
-		setChicken();
 		setView();
+//		setChicken();
 		orderButton = new JButton("주문하기");
 		orderButton.setFont(new Font("돋움", Font.PLAIN, 12));
 		orderButton.setBounds(65, 200, 97, 23);
 		contentPane.add(orderButton);
 		actionListener();
-		
 		
         try {
             ip = InetAddress.getByName(DEST_IP);
@@ -53,41 +62,34 @@ public class OrderFood extends JFrame implements Runnable {
         
         Thread th = new Thread(this);
         th.start();
+        this.setVisible(true);
 	}
 	private void actionListener() {
 		orderButton.addActionListener(e-> {
-			list = new ArrayList<>();
-			list.add(comboBox.getSelectedItem().toString());
-			list.add(comboBox1.getSelectedItem().toString());
-			list.add(comboBox2.getSelectedItem().toString());
-			list.add(comboBox3.getSelectedItem().toString());
-
-			String t = needText.getText();
-			if(t.equals("")) {
-				list.add("No Description");
-			} else list.add(needText.getText());
-
-			packet = "ORDER\n"+list.toString();
-
-			int result = JOptionPane.showConfirmDialog(null, "아래 내용이 맞나요?\n"
-					+ packet.substring(6) ,"CHECK_ORDER", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
+			parsingJson();
+			int result = JOptionPane.showConfirmDialog(null, "주문하시겠습니까?"
+					,"CHECK_ORDER", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
 			if(result == JOptionPane.YES_OPTION) { //내용이 맞다고 확인 했을때
 				sendMsg(packet);
 			}
 		});
-		comboBox.addItemListener(e-> {
-			cb = (JComboBox) e.getSource();
-			String index = (String) cb.getSelectedItem();
+		comboBox[0].addItemListener(e-> {
+			comboBox[0] = (JComboBox) e.getSource();
+			String index = (String) comboBox[0].getSelectedItem();
 			if(index == "Chicken") {
 				setChicken();
 				setComboBox();
+				comboBox[3].setVisible(true);
 			}
 			else if(index=="Pizza") {
 				setPizza();
 				setComboBox();
+				comboBox[3].setVisible(true);
+				
 			} else if(index=="Pork"){
 				setPork();
 				setComboBox();
+				comboBox[3].setVisible(false);
 			}
 		});
 		resetButton.addActionListener(e-> {
@@ -95,7 +97,7 @@ public class OrderFood extends JFrame implements Runnable {
 			main.add("Chicken");
 			main.add("Pizza");
 			main.add("Pork");
-			comboBox.setModel(new DefaultComboBoxModel(main.toArray()));
+			comboBox[0].setModel(new DefaultComboBoxModel(main.toArray()));
 			setChicken();
 			setComboBox();
 			needText.setText("");
@@ -105,13 +107,44 @@ public class OrderFood extends JFrame implements Runnable {
 					,"CHECK_CANCEL", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
 			if(result == JOptionPane.YES_OPTION) {
 				sendMsg("CANCEL="+myOrderSeq);
-				System.exit(0);
+				new Thread(()->{
+					try {
+						Thread.sleep(1500);
+					} catch (InterruptedException e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+					}
+					if(cancel) {
+						System.exit(0);											
+					} else {
+						JOptionPane.showMessageDialog(this, "요리가 이미 시작됐기 때문에 주문을 취소하실 수 없습니다.","실패알림",
+								JOptionPane.CANCEL_OPTION);
+					}
+				}).start();
 //				enableBtn();
 			}
 		});
 		arriveButton.addActionListener(e->{
 			sendMsg("TIME");
 		});
+	}
+	private void parsingJson() {
+		list = new ArrayList<>();
+		for (int i = 0; i < comboBox.length; i++) {
+			if(comboBox[i].getSelectedItem().equals("No")) {
+				list.add("");
+			} else {
+				list.add(comboBox[i].getSelectedItem().toString());
+			}
+		}
+		if(needText.getText().equals("")) {
+			list.add("");
+		} else {
+			list.add(needText.getText());
+		}
+		Gson gson = new Gson();
+		menu = new Menu(list.get(0),list.get(1),list.get(2),list.get(3),list.get(4));
+		packet = "ORDER\n" + gson.toJson(menu);
 	}
 	private void setView() {
 		setTitle("배달의 마왕 - 상세 주문");
@@ -123,45 +156,47 @@ public class OrderFood extends JFrame implements Runnable {
 		setContentPane(contentPane);
 		contentPane.setLayout(null);
 
-		JLabel lblNewLabel = new JLabel("메인 메뉴");
-		lblNewLabel.setFont(new Font("돋움", Font.PLAIN, 12));
-		lblNewLabel.setBounds(12, 50, 57, 15);
-		contentPane.add(lblNewLabel);
+		mainLabel = new JLabel("메인 메뉴");
+		mainLabel.setFont(new Font("돋움", Font.PLAIN, 12));
+		mainLabel.setBounds(12, 50, 57, 15);
+		contentPane.add(mainLabel);
 
-		JLabel lblNewLabel_1 = new JLabel("추가 옵션1");
-		lblNewLabel_1.setFont(new Font("돋움", Font.PLAIN, 12));
-		lblNewLabel_1.setBounds(12, 85, 70, 15);
-		contentPane.add(lblNewLabel_1);
+		optionLabel1 = new JLabel("추가 옵션1");
+		optionLabel1.setFont(new Font("돋움", Font.PLAIN, 12));
+		optionLabel1.setBounds(12, 85, 70, 15);
+		contentPane.add(optionLabel1);
 
-		JLabel lblNewLabel_2 = new JLabel("추가 옵션2");
-		lblNewLabel_2.setFont(new Font("돋움", Font.PLAIN, 12));
-		lblNewLabel_2.setBounds(12, 120, 70, 15);
-		contentPane.add(lblNewLabel_2);
+		optionLabel2 = new JLabel("추가 옵션2");
+		optionLabel2.setFont(new Font("돋움", Font.PLAIN, 12));
+		optionLabel2.setBounds(12, 120, 70, 15);
+		contentPane.add(optionLabel2);
 
-		JLabel lblNewLabel_2_1 = new JLabel("추가 옵션3");
-		lblNewLabel_2_1.setFont(new Font("돋움", Font.PLAIN, 12));
-		lblNewLabel_2_1.setBounds(12, 155, 70, 15);
-		contentPane.add(lblNewLabel_2_1);
+		optionLabel3 = new JLabel("추가 옵션3");
+		optionLabel3.setFont(new Font("돋움", Font.PLAIN, 12));
+		optionLabel3.setBounds(12, 155, 70, 15);
+		contentPane.add(optionLabel3);
 
-		comboBox = new JComboBox(main.toArray());
-		comboBox.setBounds(92, 45, 138, 23);
-		comboBox.setFont(new Font("돋움",Font.PLAIN,12));
-		contentPane.add(comboBox);
+		setChicken();
+		
+		comboBox[0] = new JComboBox(main.toArray());
+		comboBox[0].setBounds(92, 45, 138, 23);
+		comboBox[0].setFont(new Font("돋움",Font.PLAIN,12));
+		contentPane.add(comboBox[0]);
 
-		comboBox1 = new JComboBox(sub1.toArray());
-		comboBox1.setBounds(92, 80, 138, 23);
-		comboBox1.setFont(new Font("돋움",Font.PLAIN,12));
-		contentPane.add(comboBox1);
+		comboBox[1] = new JComboBox(option1.toArray());
+		comboBox[1].setBounds(92, 80, 138, 23);
+		comboBox[1].setFont(new Font("돋움",Font.PLAIN,12));
+		contentPane.add(comboBox[1]);
 
-		comboBox2 = new JComboBox(sub2.toArray());
-		comboBox2.setBounds(92, 115, 138, 23);
-		comboBox2.setFont(new Font("돋움",Font.PLAIN,12));
-		contentPane.add(comboBox2);
+		comboBox[2] = new JComboBox(option2.toArray());
+		comboBox[2].setBounds(92, 115, 138, 23);
+		comboBox[2].setFont(new Font("돋움",Font.PLAIN,12));
+		contentPane.add(comboBox[2]);
 
-		comboBox3 = new JComboBox(sub3.toArray());
-		comboBox3.setBounds(92, 150, 138, 23);
-		comboBox3.setFont(new Font("돋움",Font.PLAIN,12));
-		contentPane.add(comboBox3);
+		comboBox[3] = new JComboBox(option3.toArray());
+		comboBox[3].setBounds(92, 150, 138, 23);
+		comboBox[3].setFont(new Font("돋움",Font.PLAIN,12));
+		contentPane.add(comboBox[3]);
 
 		JLabel lblNewLabel_3 = new JLabel("주문시 추가 요구사항");
 		lblNewLabel_3.setFont(new Font("돋움", Font.PLAIN, 12));
@@ -193,60 +228,73 @@ public class OrderFood extends JFrame implements Runnable {
 		cancelButton.setBounds(221, 228, 97, 23);
 		contentPane.add(cancelButton);
 		cancelButton.setEnabled(false);
+		
+//		setChicken();
 	}
 	private void setComboBox() {
-		comboBox1.setModel(new DefaultComboBoxModel(sub1.toArray()));
-		comboBox2.setModel(new DefaultComboBoxModel(sub2.toArray()));
-		comboBox3.setModel(new DefaultComboBoxModel(sub3.toArray()));
+		comboBox[1].setModel(new DefaultComboBoxModel(option1.toArray()));
+		comboBox[2].setModel(new DefaultComboBoxModel(option2.toArray()));
+		comboBox[3].setModel(new DefaultComboBoxModel(option3.toArray()));
 	}
 	private void setPork() {
-		sub1.clear();
-		sub2.clear();
-		sub3.clear();
-		sub1.add("Normal");
-		sub1.add("No Hot");
-		sub1.add("Hot");
-		sub1.add("Very Hot");
-		sub2.add("Coke 500ml");
-		sub2.add("Cider 500ml");
-		sub2.add("Coke 1.5L");
-		sub2.add("Cider 1.5L");
-		sub3.add("No");
+
+		option1.clear();
+		option2.clear();
+		option3.clear();
+		optionLabel1.setText("맵기");
+		optionLabel2.setText("음료");
+		optionLabel3.setText("");
+		option1.add("Normal");
+		option1.add("No Hot");
+		option1.add("Hot");
+		option1.add("Very Hot");
+		option2.add("Coke 500ml");
+		option2.add("Cider 500ml");
+		option2.add("Coke 1.5L");
+		option2.add("Cider 1.5L");
+		option3.add("No");
 	}
 	private void setPizza() {
-		sub1.clear();
-		sub2.clear();
-		sub3.clear();
-		sub1.add("No");
-		sub1.add("Cheese Crust");
-		sub2.add("Coke 500ml");
-		sub2.add("Cider 500ml");
-		sub2.add("Coke 1.5L");
-		sub2.add("Cider 1.5L");
-		sub3.add("No");
-		sub3.add("Add Onion Source");
+
+		option1.clear();
+		option2.clear();
+		option3.clear();
+		optionLabel1.setText("토핑");
+		optionLabel2.setText("음료");
+		option1.add("Normal");
+		option1.add("Cheese Crust");
+		option2.add("Coke 500ml");
+		option2.add("Cider 500ml");
+		option2.add("Coke 1.5L");
+		option2.add("Cider 1.5L");
+		option3.add("No");
+		option3.add("Add Onion Source");
 	}
 	private void setChicken() {
-		sub1.clear();
-		sub2.clear();
-		sub3.clear();
-		sub1.add("Boneless");
-		sub1.add("Bone");
-		sub2.add("Coke 500ml");
-		sub2.add("Cider 500ml");
-		sub2.add("Coke 1.5L");
-		sub2.add("Cider 1.5L");
-		sub3.add("NO");
-		sub3.add("Add Hot Source");
+
+		option1.clear();
+		option2.clear();
+		option3.clear();
+		optionLabel1.setText("뼈,순살 선택");
+		optionLabel2.setText("음료");
+		optionLabel3.setText("소스 추가");
+		option1.add("Boneless");
+		option1.add("Bone");
+		option2.add("Coke 500ml");
+		option2.add("Cider 500ml");
+		option2.add("Coke 1.5L");
+		option2.add("Cider 1.5L");
+		option3.add("No");
+		option3.add("Add Hot Source");
 	}
 	private void disableBtn() {
 		orderButton.setEnabled(false);
 		resetButton.setEnabled(false);
 		arriveButton.setEnabled(true);
-		comboBox.setEnabled(false);
-		comboBox1.setEnabled(false);
-		comboBox2.setEnabled(false);
-		comboBox3.setEnabled(false);
+		comboBox[0].setEnabled(false);
+		comboBox[1].setEnabled(false);
+		comboBox[2].setEnabled(false);
+		comboBox[3].setEnabled(false);
 		needText.setEnabled(false);
 		cancelButton.setEnabled(true);
 	}
@@ -254,17 +302,17 @@ public class OrderFood extends JFrame implements Runnable {
 		orderButton.setEnabled(true);
 		resetButton.setEnabled(true);
 		arriveButton.setEnabled(false);
-		comboBox.setEnabled(true);
-		comboBox1.setEnabled(true);
-		comboBox2.setEnabled(true);
-		comboBox3.setEnabled(true);
+		comboBox[0].setEnabled(true);
+		comboBox[1].setEnabled(true);
+		comboBox[2].setEnabled(true);
+		comboBox[3].setEnabled(true);
 		needText.setEnabled(true);
 		cancelButton.setEnabled(false);
 	}
 	
 	public void ArriveTime(String msg) {
-		int result = JOptionPane.showConfirmDialog(null, "도착예정시간\n"
-				+ msg ,"Arrive_Time", JOptionPane.CLOSED_OPTION, JOptionPane.QUESTION_MESSAGE);
+		int result = JOptionPane.showConfirmDialog(null, "도착예정시간은 "
+				+ msg +"분 입니다.","Arrive_Time", JOptionPane.CLOSED_OPTION, JOptionPane.QUESTION_MESSAGE);
 		if(result == JOptionPane.CLOSED_OPTION) { //내용이 맞다고 확인 했을때
 			dispose();
 		}
@@ -288,21 +336,23 @@ public class OrderFood extends JFrame implements Runnable {
 	}
 	private void recvMsg(String recvData) {
 		if(recvData.startsWith("SUCCESS")) {
-			recvData = recvData.substring(7);
-			String temp[] = recvData.split("=");
-			JOptionPane.showMessageDialog(this, "예상 소요 시간은 "+temp[1]+"분 입니다.");
+			JOptionPane.showMessageDialog(this, "주문이 접수되었습니다.");
 			disableBtn();
 		} else if(recvData.startsWith("ORDER_NUMBER")) {
 			recvData = recvData.substring(11);
 			String temp[] = recvData.split("=");
 			myOrderSeq = Integer.parseInt(temp[1]);
-			System.out.println("내 주문 번호는 : "+myOrderSeq);
 		} else if(recvData.startsWith("TIME")) {
 			String temp[] = recvData.split("=");
 			ArriveTime(temp[1]);
-		} else if(recvData.startsWith("CANCEL")) {
+		} else if(recvData.startsWith("CANCEL_OK")) {
 			JOptionPane.showMessageDialog(this, "주문하신 메뉴가 취소되었습니다.","취소알림",
 					JOptionPane.INFORMATION_MESSAGE);
+		} else if(recvData.startsWith("CANCEL_FAIL")) {
+			cancel = false;
+		} else if(recvData.startsWith("FAIL")) {
+			JOptionPane.showMessageDialog(this, "주문이 밀려있어 안됩니다.","실패 알림",
+					JOptionPane.CANCEL_OPTION);
 		}
 	}
 
@@ -319,7 +369,6 @@ public class OrderFood extends JFrame implements Runnable {
 	}
 	public static void main(String[] args) {
 		OrderFood orderFood = new OrderFood();
-		orderFood.setVisible(true);
 	}
 
 }

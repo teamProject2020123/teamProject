@@ -1,11 +1,13 @@
 package chat_app;
 import java.awt.Font;
 import java.io.IOException;
-import java.time.*;
-import java.net.*;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
+import java.net.SocketException;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
@@ -17,12 +19,13 @@ import javax.swing.JList;
 import javax.swing.JPanel;
 import javax.swing.border.EmptyBorder;
 
+import com.google.gson.Gson;
+
 public class Store extends JFrame{
 	private DatagramSocket ds;
 	private DefaultListModel model = new DefaultListModel();
 	private ArrayList<String> data = new ArrayList<>();
 	private HashMap<Integer, String> map = new HashMap<Integer, String>();
-	Set<Entry<Integer, String>> entries;
 	private int orderSeq;
 	private static final String DEST_IP = "127.0.0.1";
 	private int port;
@@ -31,16 +34,15 @@ public class Store extends JFrame{
 	private JList<String> list;
 	private int count =1;
 	private JButton btn1,btn2,btn3,btn4;
-
-
-	private int hour;
-	private int minute;
-	private int deliverTime = 10;
+	private int hour, minute, deliverTime;
+	private final int CHICKEN_TIME = 10;
+	private final int PIZZA_TIME = 12;
+	private final int PORK_TIME = 15;
 	private int timer = 0;
+	private float cookTime = 0;
 
 	public Store() {
 		setView();
-		entries = map.entrySet();
 		orderSeq=0;
 		try {
 			ds = new DatagramSocket(1004);
@@ -61,21 +63,31 @@ public class Store extends JFrame{
 				String recvData = new String(dp.getData(), 0, dp.getLength());
 				if(recvData.startsWith("ORDER")) {
 					System.out.println("====================================");
-					map.put(count, recvData.substring(6)); //HashMap에 Order 내용 추가
-					updateList();
-					sendMsg("SUCCESS\nTIME=5");
-					sendMsg("ORDER_NUMBER="+(++orderSeq));	
-					setTime();
-				}
+					recvData = recvData.substring(6);
+					if(map.size()<3) { 
+						map.put(count, parsingJson(recvData)); //HashMap에 Order 내용 추가
+						updateList();
+						sendMsg("SUCCESS");
+						sendMsg("ORDER_NUMBER="+(++orderSeq));	
+						setTime();						
+					} else {
+						//주문 시간에 추가되도록 해야함
+						
+						sendMsg("FAILED");
+					}
+				} 
 				else if(recvData.startsWith("TIME")) {
 					getTime();
 					sendMsg("TIME="+(deliverTime - timer));
 
 				} else if(recvData.startsWith("CANCEL")) {
 					int num = Integer.parseInt(recvData.substring(7));
-					System.out.println("ordernumber = "+num);
-					cancelOrder(num);
-					sendMsg("CANCEL_OK");
+					if((deliverTime-timer)>cookTime) { //요리가 시작되면 주문 취소를 할 수 없게 하기 위해 작성함
+						cancelOrder(num);
+						sendMsg("CANCEL_OK");						
+					} else if((deliverTime-timer)<=cookTime) {
+						sendMsg("CANCEL_FAIL");
+					}
 				}
 
 			}
@@ -83,6 +95,27 @@ public class Store extends JFrame{
 			ds.close();
 			e.printStackTrace();
 		}
+	}
+	private String parsingJson(String recvData) {
+		Gson gson = new Gson();
+		Menu menu = gson.fromJson(recvData,Menu.class);
+		String orderList = menu.main;
+		if(menu.main.equals("Chicken")) {
+			deliverTime = CHICKEN_TIME;
+			cookTime = CHICKEN_TIME * 0.8f;
+		} else if(menu.main.equals("Pizza")) {
+			deliverTime = PIZZA_TIME;
+			cookTime = PIZZA_TIME * 0.8f;
+		} else {
+			deliverTime = PORK_TIME;
+			cookTime = PORK_TIME * 0.8f;
+		}
+		if(!menu.sub1.isEmpty()) orderList += ","+menu.sub1;
+		if(!menu.sub2.isEmpty()) orderList += ","+menu.sub2;
+		if(!menu.sub3.isEmpty()) orderList += ","+menu.sub3;
+		if(!menu.description.isEmpty()) orderList += ","+menu.description;
+		
+		return orderList;
 	}
 	private void cancelOrder(int n) {
 		int key=0;
@@ -92,9 +125,8 @@ public class Store extends JFrame{
 			String arr[] = msg.split("번");
 			key = Integer.parseInt(arr[0]);
 			if(n==key) {
-				//삭제하도록
-				map.remove(n); //oderSeq 에 맞는 HashMap 데이터 삭제
-				model.remove(i); //리스트에 보이는건 다를 수있다... -> 별도의 카운트 생성?
+				map.remove(n); 
+				model.remove(i); 
 				list.setModel(model);
 				break;
 			}
@@ -161,13 +193,9 @@ public class Store extends JFrame{
 	}
 
 	private void getTime() {
-
-		System.out.println(timer);
 		LocalDateTime checkPoint = LocalDateTime.now();
 		int m_Hour = hour - checkPoint.getHour();
 		int m_Minute = minute - checkPoint.getMinute();	
-		System.out.println(hour+":"+minute+ " " + m_Hour+":"+m_Minute);
-
 		if(m_Hour == 0) {
 			timer = -m_Minute;
 		}
@@ -177,8 +205,6 @@ public class Store extends JFrame{
 		else {
 			timer = 24 - (m_Hour)*60 - m_Minute;
 		}
-
-		System.out.println(timer);
 	}
 
 	public static void main(String[] args) {
