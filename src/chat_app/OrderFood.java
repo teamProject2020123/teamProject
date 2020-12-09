@@ -1,22 +1,16 @@
 package chat_app;
 
-import java.awt.Font;
+import javax.swing.*;
 import java.awt.TextArea;
+
+import javax.swing.border.EmptyBorder;
+
+import java.awt.Font;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.util.ArrayList;
-
-import javax.swing.DefaultComboBoxModel;
-import javax.swing.JButton;
-import javax.swing.JComboBox;
-import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.JOptionPane;
-import javax.swing.JPanel;
-import javax.swing.border.EmptyBorder;
-
-import com.google.gson.Gson;
+import java.util.Date;
 
 public class OrderFood extends JFrame implements Runnable {
 
@@ -26,13 +20,11 @@ public class OrderFood extends JFrame implements Runnable {
 	private JPanel contentPane;
 	private JButton orderButton,resetButton,cancelButton,arriveButton;
 	private JComboBox<String> comboBox,comboBox1,comboBox2,comboBox3,cb;
-//	private JComboBox<String> comboBox;
 	private ArrayList<String> main,sub1,sub2,sub3,list;
 	private TextArea needText;
 	private String packet;
 	private InetAddress ip;
 	private DatagramSocket ds;
-	private Menu menu;
 
 	public OrderFood() {
 		main = new ArrayList<>();
@@ -61,11 +53,21 @@ public class OrderFood extends JFrame implements Runnable {
         
         Thread th = new Thread(this);
         th.start();
-        this.setVisible(true);
 	}
 	private void actionListener() {
 		orderButton.addActionListener(e-> {
-			parsingJson();
+			list = new ArrayList<>();
+			list.add(comboBox.getSelectedItem().toString());
+			list.add(comboBox1.getSelectedItem().toString());
+			list.add(comboBox2.getSelectedItem().toString());
+			list.add(comboBox3.getSelectedItem().toString());
+
+			String t = needText.getText();
+			if(t.equals("")) {
+				list.add("No Description");
+			} else list.add(needText.getText());
+
+			packet = "ORDER\n"+list.toString();
 
 			int result = JOptionPane.showConfirmDialog(null, "아래 내용이 맞나요?\n"
 					+ packet.substring(6) ,"CHECK_ORDER", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
@@ -79,16 +81,13 @@ public class OrderFood extends JFrame implements Runnable {
 			if(index == "Chicken") {
 				setChicken();
 				setComboBox();
-				comboBox3.setEnabled(true);
 			}
 			else if(index=="Pizza") {
 				setPizza();
 				setComboBox();
-				comboBox3.setEnabled(true);
 			} else if(index=="Pork"){
 				setPork();
 				setComboBox();
-				comboBox3.setEnabled(false);
 			}
 		});
 		resetButton.addActionListener(e-> {
@@ -113,16 +112,6 @@ public class OrderFood extends JFrame implements Runnable {
 		arriveButton.addActionListener(e->{
 			sendMsg("TIME");
 		});
-	}
-	private void parsingJson() {
-		Gson gson = new Gson();
-
-		menu = new Menu(comboBox.getSelectedItem().toString(),
-				comboBox1.getSelectedItem().toString(),
-				comboBox2.getSelectedItem().toString(),
-				comboBox3.getSelectedItem().toString(),
-				needText.getText());
-		packet = "ORDER\n"+gson.toJson(menu);
 	}
 	private void setView() {
 		setTitle("배달의 마왕 - 상세 주문");
@@ -247,7 +236,7 @@ public class OrderFood extends JFrame implements Runnable {
 		sub2.add("Cider 500ml");
 		sub2.add("Coke 1.5L");
 		sub2.add("Cider 1.5L");
-		sub3.add("No");
+		sub3.add("NO");
 		sub3.add("Add Hot Source");
 	}
 	private void disableBtn() {
@@ -299,9 +288,9 @@ public class OrderFood extends JFrame implements Runnable {
 	}
 	private void recvMsg(String recvData) {
 		if(recvData.startsWith("SUCCESS")) {
-//			recvData = recvData.substring(7);
-//			String temp[] = recvData.split("=");
-			JOptionPane.showMessageDialog(this, "주문이 접수되었습니다.");
+			recvData = recvData.substring(7);
+			String temp[] = recvData.split("=");
+			JOptionPane.showMessageDialog(this, "예상 소요 시간은 "+temp[1]+"분 입니다.");
 			disableBtn();
 		} else if(recvData.startsWith("ORDER_NUMBER")) {
 			recvData = recvData.substring(11);
@@ -314,9 +303,6 @@ public class OrderFood extends JFrame implements Runnable {
 		} else if(recvData.startsWith("CANCEL")) {
 			JOptionPane.showMessageDialog(this, "주문하신 메뉴가 취소되었습니다.","취소알림",
 					JOptionPane.INFORMATION_MESSAGE);
-		} else if(recvData.startsWith("FAIL")) {
-			JOptionPane.showMessageDialog(this, "주문이 밀려있어 안됩니다.","실패 알림",
-					JOptionPane.CANCEL_OPTION);
 		}
 	}
 
@@ -333,6 +319,7 @@ public class OrderFood extends JFrame implements Runnable {
 	}
 	public static void main(String[] args) {
 		OrderFood orderFood = new OrderFood();
+		orderFood.setVisible(true);
 	}
 
 }
