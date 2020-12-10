@@ -37,6 +37,7 @@ public class OrderFood extends JFrame implements Runnable {
 	private DatagramSocket ds;
 	private boolean cancel = true;
 	private boolean moreTime = false;
+	private Gson gson = new Gson();
 	
 	private int hour,min;
 
@@ -70,7 +71,7 @@ public class OrderFood extends JFrame implements Runnable {
 	}
 	private void actionListener() {
 		orderButton.addActionListener(e-> {
-			parsingJson();
+			parseOrder();
 			int result = JOptionPane.showConfirmDialog(null, "주문하시겠습니까?"
 					,"CHECK_ORDER", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
 			if(result == JOptionPane.YES_OPTION) { 
@@ -119,7 +120,7 @@ public class OrderFood extends JFrame implements Runnable {
 			int result = JOptionPane.showConfirmDialog(null, "정말 주문을 취소하시겠습니까?"
 					,"CHECK_CANCEL", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
 			if(result == JOptionPane.YES_OPTION) {
-				sendMsg("CANCEL="+myOrderSeq);
+				sendMsg(parseToJson("CANCEL",myOrderSeq));
 				new Thread(()->{
 					try {
 						Thread.sleep(1500);
@@ -137,14 +138,12 @@ public class OrderFood extends JFrame implements Runnable {
 			}
 		});
 		arriveButton.addActionListener(e->{
-			if(moreTime) {
-				sendMsg("mTIME="+hour+":"+min+":"+comboBox[0].getSelectedItem().toString());
-			} else {
-				sendMsg("TIME="+hour+":"+min+":"+comboBox[0].getSelectedItem().toString());
-			}
+			Packet p = new Packet("TIME",hour,min,comboBox[0].getSelectedItem().toString());
+			String data = gson.toJson(p);
+			sendMsg(data);
 		});
 	}
-	private void parsingJson() {
+	private void parseOrder() {
 		list = new ArrayList<>();
 		for (int i = 0; i < comboBox.length; i++) {
 			if(comboBox[i].getSelectedItem().equals("No")) {
@@ -158,9 +157,8 @@ public class OrderFood extends JFrame implements Runnable {
 		} else {
 			list.add(needText.getText());
 		}
-		Gson gson = new Gson();
 		menu = new Menu(list.get(0),list.get(1),list.get(2),list.get(3),list.get(4));
-		packet = "ORDER\n" + gson.toJson(menu);
+		packet = "ORDER" + gson.toJson(menu);
 		System.out.println(packet);
 	}
 	private void setView() {
@@ -315,26 +313,18 @@ public class OrderFood extends JFrame implements Runnable {
 		needText.setEnabled(false);
 		cancelButton.setEnabled(true);
 	}
-//	private void enableBtn() {
-//		orderButton.setEnabled(true);
-//		resetButton.setEnabled(true);
-//		arriveButton.setEnabled(false);
-//		comboBox[0].setEnabled(true);
-//		comboBox[1].setEnabled(true);
-//		comboBox[2].setEnabled(true);
-//		comboBox[3].setEnabled(true);
-//		needText.setEnabled(true);
-//		cancelButton.setEnabled(false);
-//	}
-	
-	public void ArriveTime(String msg) {
+	private String parseToJson(String method, int number) {
+		Packet p = new Packet(method,number);
+		String data = gson.toJson(p);
+		return data;
+	}
+	public void ArriveTime(int number) {
 		int result = JOptionPane.showConfirmDialog(null, "도착까지 "
-				+ msg +"분 남았습니다.","Arrive_Time", JOptionPane.CLOSED_OPTION, JOptionPane.QUESTION_MESSAGE);
+				+ number +"분 남았습니다.","Arrive_Time", JOptionPane.CLOSED_OPTION, JOptionPane.QUESTION_MESSAGE);
 		if(result == JOptionPane.CLOSED_OPTION) { 
 			dispose();
 		}
 	}
-	
 	@Override
 	public void run() {
 		while( true ) { 
@@ -352,17 +342,18 @@ public class OrderFood extends JFrame implements Runnable {
 		}
 	}
 	private void recvMsg(String recvData) {
-		if(recvData.startsWith("SUCCESS")) {
-			JOptionPane.showMessageDialog(this, "주문에 성공하였습니다.");
-//			moreTime=false;
-			disableBtn();
-		} else if(recvData.startsWith("ORDER_NUMBER")) {
-			recvData = recvData.substring(11);
-			String temp[] = recvData.split("=");
-			myOrderSeq = Integer.parseInt(temp[1]);
-		} else if(recvData.startsWith("TIME")) {
-			String temp[] = recvData.split("=");
-			ArriveTime(temp[1]);
+		if(recvData.startsWith("{")) {
+			Packet p = gson.fromJson(recvData, Packet.class);
+			String methods = p.method;
+			if(methods.equals("SUCCESS")) {
+				JOptionPane.showMessageDialog(this, "주문에 성공하였습니다.");
+				disableBtn();
+				myOrderSeq = p.hour;
+			} else if(methods.equals("TIME")) {
+				ArriveTime(p.hour);
+			} else if(methods.equals("mTIME")) {
+				ArriveTime(p.hour);
+			}
 		} else if(recvData.startsWith("CANCEL_OK")) {
 			JOptionPane.showMessageDialog(this, "주문이 취소되었습니다..","주문 취소",
 					JOptionPane.INFORMATION_MESSAGE);
@@ -374,10 +365,9 @@ public class OrderFood extends JFrame implements Runnable {
 						"CHECK_ORDER", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
 				if(result == JOptionPane.YES_OPTION) {
 					moreTime = true;
-					parsingJson();
+					parseOrder();
 					getOrderTime();
 					sendMsg("OK\n"+packet);
-					System.out.println("OK\n"+packet);
 				} else {
 					sendMsg("NO");
 				}
@@ -387,7 +377,6 @@ public class OrderFood extends JFrame implements Runnable {
 			System.exit(0);
 		}
 	}
-
 	public void sendMsg(String msg) {
 		try {
 			byte[] buffer = msg.getBytes();
@@ -399,7 +388,6 @@ public class OrderFood extends JFrame implements Runnable {
 			e.printStackTrace();
 		}
 	}
-	
 	private void getOrderTime() {
 		LocalDateTime timePoint = LocalDateTime.now();
 		hour = timePoint.getHour();
@@ -408,5 +396,4 @@ public class OrderFood extends JFrame implements Runnable {
 	public static void main(String[] args) {
 		OrderFood orderFood = new OrderFood();
 	}
-
 }

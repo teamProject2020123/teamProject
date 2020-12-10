@@ -22,7 +22,23 @@ import javax.swing.JPanel;
 import javax.swing.border.EmptyBorder;
 
 import com.google.gson.Gson;
+class Packet{
+	String method,data;
+	int hour,min;
+	public Packet(String method, int number) {
+		super();
+		this.method = method;
+		this.hour = number;
+	}
+	public Packet(String method, int hour,int min, String data) {
+		super();
+		this.method = method;
+		this.hour = hour;
+		this.min = min;
+		this.data = data;
+	}
 
+}
 public class Store extends JFrame{
 	private DatagramSocket ds;
 	private DefaultListModel model = new DefaultListModel();
@@ -44,6 +60,7 @@ public class Store extends JFrame{
 	private final int PORK_TIME = 15;
 	private int timer = 0;
 	private float cookTime = 0;
+	private Gson gson = new Gson();
 
 	public Store() {
 		setView();
@@ -63,74 +80,73 @@ public class Store extends JFrame{
 				ds.receive(dp);
 				port=dp.getPort();
 				String recvData = new String(dp.getData(), 0, dp.getLength());
-				if(recvData.startsWith("ORDER")) {
-					System.out.println("====================================");
-					recvData = recvData.substring(6);
-					if(currentList.size()<3) { // 주문이 3개 이하일때 정상처리
-						totalList.put(count, parsingJson(recvData));
-						currentList.put(count, parsingJson(recvData)); //HashMap에 Order 내용 추가
-						updateList();
-						sendMsg("SUCCESS");
-						sendMsg("ORDER_NUMBER="+(++orderSeq));					
-						addUserList(orderSeq,port);
-					} else { 
-						//시간이 더 걸리는데 괜찮냐는 메시지 전송
-						sendMsg("MORE_TIME_CHECK");
-					}
-				} else if(recvData.startsWith("TIME")) {
-					String[] arr = recvData.substring(5).split(":");		
-					getTime(Integer.parseInt(arr[0]),Integer.parseInt(arr[1]));				
-					if(arr[2].equals("Chicken")) {
-						deliverTime = CHICKEN_TIME;
-					} else if(arr[2].equals("Pizza")) {
-						deliverTime = PIZZA_TIME;				
-					} else if(arr[2].equals("Pork")){
-						deliverTime = PORK_TIME;				
-					}
-					sendMsg("TIME="+(deliverTime - timer));
-				} else if(recvData.startsWith("mTIME")) {
-					String[] arr = recvData.substring(6).split(":");		
-					getTime(Integer.parseInt(arr[0]),Integer.parseInt(arr[1]));				
-					if(arr[2].equals("Chicken")) {
-						deliverTime = CHICKEN_TIME+10;
-					} else if(arr[2].equals("Pizza")) {
-						deliverTime = PIZZA_TIME+10;				
-					} else if(arr[2].equals("Pork")){
-						deliverTime = PORK_TIME+10;				
-					}
-					sendMsg("TIME="+(deliverTime - timer));
-				} else if(recvData.startsWith("CANCEL")) {
-					int num = Integer.parseInt(recvData.substring(7));
-					if((deliverTime-timer)>cookTime) { //요리가 시작되면 주문 취소를 할 수 없게 하기 위해 작성함
-						cancelOrder(num);
-						sendMsg("CANCEL_OK");						
-					} else if((deliverTime-timer)<=cookTime) {
-						sendMsg("CANCEL_FAIL");
-					}
-				} else if(recvData.startsWith("OK")) {
-					recvData = recvData.substring(9);//OK\nORDER\n짜르고 json데이터만
-					currentList.put(count, parsingJson(recvData));
-					updateList();
-					sendMsg("SUCCESS");
-					sendMsg("ORDER_NUMBER="+(++orderSeq));
-				} else if(recvData.startsWith("No")) {
-					System.out.println("시간이 오래걸려 사용자쪽에서 주문을 취소함");
-				}
-
+				recvMsg(recvData); 
 			}
 		} catch (Exception e) {
 			ds.close();
 			e.printStackTrace();
 		}
 	}
+	private void recvMsg(String recvData) throws IOException {
+		if(recvData.startsWith("ORDER")) {
+			System.out.println("====================================");
+			recvData = recvData.substring(5);
+			if(currentList.size()<3) { // 주문이 3개 이하일때 정상처리
+				totalList.put(count, parseOrder(recvData));
+				currentList.put(count, parseOrder(recvData)); //HashMap에 Order 내용 추가
+				updateList();
+				sendMsg(parseToJson("SUCCESS",++orderSeq));
+				addUserList(orderSeq,port); //userList에 추가
+			} else { 
+				//시간이 더 걸리는데 괜찮냐는 메시지 전송
+				sendMsg("MORE_TIME_CHECK");
+			}
+		} 
+		else if(recvData.startsWith("{")) {
+			int t = deliverTime-timer;
+			Packet p = gson.fromJson(recvData, Packet.class);
+			String methods = p.method;
+			if(methods.equals("CANCEL")) {
+				if((t)>cookTime) { //요리가 시작되면 주문 취소를 할 수 없게 하기 위해 작성함
+					cancelOrder(p.hour);
+					sendMsg("CANCEL_OK");						
+				} else if(t<=cookTime) {
+					sendMsg("CANCEL_FAIL");
+				}
+			} else if(methods.equals("TIME")) {
+				getTime(p.hour,p.min);
+				switch (p.data) {
+					case "Chicken":
+						deliverTime = CHICKEN_TIME;
+						break;
+					case "Pizza":
+						deliverTime = PIZZA_TIME;
+						break;
+					default:
+						deliverTime = PORK_TIME;
+				}
+				t=deliverTime - timer;
+				sendMsg(parseToJson("TIME",t));
+			} 
+		} else if(recvData.startsWith("OK")) {
+			recvData = recvData.substring(8);//OK\nORDER\n짜르고 json데이터만
+			currentList.put(count, parseOrder(recvData));
+			updateList();
+			sendMsg("SUCCESS");
+			sendMsg("ORDER_NUMBER="+(++orderSeq));
+		}
+	}
+	private String parseToJson(String method, int number) {
+		Packet p = new Packet(method,number);
+		String data = gson.toJson(p);
+		return data;
+	}
 	private void addUserList(int orderSeq, int port) {
 		if(!userList.containsValue(port)) {
 			userList.put(orderSeq, port);
 		}
-		System.out.println("userList : "+ userList);
 	}
-	private String parsingJson(String recvData) {
-		Gson gson = new Gson();
+	private String parseOrder(String recvData) {
 		Menu menu = gson.fromJson(recvData,Menu.class);
 		String orderList = menu.main;
 		if(menu.main.equals("Chicken")) {	
@@ -147,9 +163,9 @@ public class Store extends JFrame{
 		if(!menu.sub2.isEmpty()) orderList += ","+menu.sub2;
 		if(!menu.sub3.isEmpty()) orderList += ","+menu.sub3;
 		if(!menu.description.isEmpty()) orderList += ","+menu.description;
-		System.out.println("오더 리스트는 "+orderList);
 		return orderList;			
 	}
+
 	private void cancelOrder(int n) {
 		int key=0;
 		//삭제요청 들어오면 먼저, 해당하는 번호를 찾는다
@@ -183,19 +199,23 @@ public class Store extends JFrame{
 			}
 		});
 		showCanceledList.addActionListener(e->{
-
+			
 		});
 		exitButton.addActionListener(e->{
 			//모든 사용자에게 브로드캐스트로 주문이 취소되었음을 알리고 종료함
-			int result = JOptionPane.showConfirmDialog(null, "종료하면 모든 주문이 취소됩니다. "
-					+ "그래도 취소하시겠습니까??",
-					"종료 확인", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
-			if(result == JOptionPane.YES_OPTION) {
-				currentList.clear();
-				model.clear();
-				list.setModel(model);
-				broadcastMsg("CLOSED");
+			if(model.isEmpty()) {
 				System.exit(0);
+			} else {
+				int result = JOptionPane.showConfirmDialog(null, "종료하면 모든 주문이 취소됩니다. "
+						+ "그래도 취소하시겠습니까??",
+						"종료 확인", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
+				if(result == JOptionPane.YES_OPTION) {
+					currentList.clear();
+					model.clear();
+					list.setModel(model);
+					broadcastMsg("CLOSED");
+					System.exit(0);
+				}
 			}
 		});
 	}
@@ -214,11 +234,16 @@ public class Store extends JFrame{
 		}
 		System.out.println("[Notice] : "+msg);
 	}
-	private void sendMsg(String data) throws IOException {
-		byte[] buffer = data.getBytes();
-		DatagramPacket dp = new DatagramPacket(buffer,buffer.length,InetAddress.getByName(DEST_IP),port);
-		ds.send(dp);		
-		System.out.println("[Server -> Client] : "+data);
+	private void sendMsg(String data) {
+		try {
+			byte[] buffer = data.getBytes();
+			DatagramPacket dp = new DatagramPacket(buffer,buffer.length,InetAddress.getByName(DEST_IP),port);
+			ds.send(dp);
+			System.out.println("[Server -> Client] : "+data);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}		
 	}
 	private void setView() {
 		setTitle("Store");
