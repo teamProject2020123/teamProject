@@ -120,7 +120,7 @@ public class OrderFood extends JFrame implements Runnable {
 			int result = JOptionPane.showConfirmDialog(null, "정말 주문을 취소하시겠습니까?"
 					,"CHECK_CANCEL", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
 			if(result == JOptionPane.YES_OPTION) {
-				sendMsg(parseToJson("CANCEL",++myOrderSeq));
+				sendMsg(parseToJson("CANCEL",myOrderSeq));
 				new Thread(()->{
 					try {
 						Thread.sleep(1500);
@@ -345,14 +345,10 @@ public class OrderFood extends JFrame implements Runnable {
 		if(recvData.startsWith("{")) {
 			Packet_RESPONSE p = gson.fromJson(recvData, Packet_RESPONSE.class);
 			String methods = p.method;
-			System.out.println("method = "+p.method);
-//			System.out.println("hour = "+p.hour);
-//			System.out.println("min = "+p.min);
-			System.out.println("number = "+p.number);
 			if(methods.equals("SUCCESS")) {
 				JOptionPane.showMessageDialog(this, "주문에 성공하였습니다.");
 				disableBtn();
-//				myOrderSeq = p.hour;
+				myOrderSeq = p.number;
 			} else if(methods.equals("TIME")) {
 				ArriveTime(p.number);
 			} else if(methods.equals("mTIME")) {

@@ -107,29 +107,13 @@ public class Store extends JFrame{
 			t=deliverTime - timer;
 			sendMsg(parseToJson("TIME",t));
 			} else if(methods.equals("CANCEL")) {
-				if((t)>cookTime) { //요리가 시작되면 주문 취소를 할 수 없게 하기 위해 작성함
+				if(t>cookTime) { //요리가 시작되면 주문 취소를 할 수 없게 하기 위해 작성함
 					cancelOrder(response.number);
 					sendMsg("CANCEL_OK");						
 				} else if(t<=cookTime) {
 					sendMsg("CANCEL_FAIL");
 				}
 			} 
-			//else if(methods.equals("TIME")) {
-////				System.out.println(p.hour+" "+p.min+" "+p.method+" "+p.data);
-//				getTime(p.hour,p.min);
-//				switch (p.data) {
-//					case "Chicken":
-//						deliverTime = CHICKEN_TIME;
-//						break;
-//					case "Pizza":
-//						deliverTime = PIZZA_TIME;
-//						break;
-//					default:
-//						deliverTime = PORK_TIME;
-//				}
-//				t=deliverTime - timer;
-//				sendMsg(parseToJson("TIME",t));
-//			} 
 		} else if(recvData.startsWith("OK")) {
 			recvData = recvData.substring(8);//OK\nORDER\n짜르고 json데이터만
 			currentList.put(count, parseOrder(recvData));
