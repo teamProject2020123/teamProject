@@ -22,23 +22,8 @@ import javax.swing.JPanel;
 import javax.swing.border.EmptyBorder;
 
 import com.google.gson.Gson;
-class Packet{
-	String method,data;
-	int hour,min;
-	public Packet(String method, int number) {
-		super();
-		this.method = method;
-		this.hour = number;
-	}
-	public Packet(String method, int hour,int min, String data) {
-		super();
-		this.method = method;
-		this.hour = hour;
-		this.min = min;
-		this.data = data;
-	}
 
-}
+
 public class Store extends JFrame{
 	private DatagramSocket ds;
 	private DefaultListModel model = new DefaultListModel();
@@ -132,8 +117,7 @@ public class Store extends JFrame{
 			recvData = recvData.substring(8);//OK\nORDER\n짜르고 json데이터만
 			currentList.put(count, parseOrder(recvData));
 			updateList();
-			sendMsg("SUCCESS");
-			sendMsg("ORDER_NUMBER="+(++orderSeq));
+			sendMsg(parseToJson("SUCCESS",++orderSeq));
 		}
 	}
 	private String parseToJson(String method, int number) {
