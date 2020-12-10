@@ -9,6 +9,7 @@ import java.net.UnknownHostException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.Set;
 
@@ -103,9 +104,17 @@ public class Store extends JFrame{
 					break;
 				default:
 					deliverTime = PORK_TIME;
-			}
-			t=deliverTime - timer;
-			sendMsg(parseToJson("TIME",t));
+				}
+				int extraSeq = searchOrderCount(packet_TIME.seq);
+				//System.out.println(extraSeq);
+				t = deliverTime - timer + (extraSeq / 3) * 5;
+				if(t<0){
+					t=0;
+					sendMsg(parseToJson("SORRY",t));
+				}
+				else
+					sendMsg(parseToJson("TIME",t));
+
 			} else if(methods.equals("CANCEL")) {
 				if(t>cookTime) { //요리가 시작되면 주문 취소를 할 수 없게 하기 위해 작성함
 					cancelOrder(response.number);
@@ -187,7 +196,7 @@ public class Store extends JFrame{
 			}
 		});
 		showCanceledList.addActionListener(e->{
-			
+
 		});
 		exitButton.addActionListener(e->{
 			//모든 사용자에게 브로드캐스트로 주문이 취소되었음을 알리고 종료함
@@ -287,6 +296,17 @@ public class Store extends JFrame{
 		else {
 			timer = 24 - (m_Hour)*60 - m_Minute;
 		}
+	}
+
+	private int searchOrderCount(int orderSeq) {
+		int count=0;
+		Iterator<Integer> iter = currentList.keySet().iterator();
+		while(iter.hasNext()) {
+			int key = iter.next();
+			if(key<orderSeq)
+				count++;	
+		}
+		return count;
 	}
 
 	public static void main(String[] args) {
