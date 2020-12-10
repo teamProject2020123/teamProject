@@ -45,7 +45,6 @@ public class Store extends JFrame{
 	private final int PORK_TIME = 15;
 	private int timer = 0;
 	private float cookTime = 0;
-	private Gson gson = new Gson();
 
 	public Store() {
 		setView();
@@ -89,30 +88,48 @@ public class Store extends JFrame{
 		} 
 		else if(recvData.startsWith("{")) {
 			int t = deliverTime-timer;
-			Packet p = gson.fromJson(recvData, Packet.class);
-			String methods = p.method;
-			if(methods.equals("CANCEL")) {
+			Gson gson = new Gson();
+			Packet_RESPONSE response = gson.fromJson(recvData, Packet_RESPONSE.class);
+			Packet_TIME packet_TIME = gson.fromJson(recvData, Packet_TIME.class);
+			String methods = response.method;
+			if(methods.equals("TIME")) {
+				getTime(packet_TIME.hour,packet_TIME.min);
+				switch (packet_TIME.data) {
+				case "Chicken":
+					deliverTime = CHICKEN_TIME;
+					break;
+				case "Pizza":
+					deliverTime = PIZZA_TIME;
+					break;
+				default:
+					deliverTime = PORK_TIME;
+			}
+			t=deliverTime - timer;
+			sendMsg(parseToJson("TIME",t));
+			} else if(methods.equals("CANCEL")) {
 				if((t)>cookTime) { //요리가 시작되면 주문 취소를 할 수 없게 하기 위해 작성함
-					cancelOrder(p.hour);
+					cancelOrder(response.number);
 					sendMsg("CANCEL_OK");						
 				} else if(t<=cookTime) {
 					sendMsg("CANCEL_FAIL");
 				}
-			} else if(methods.equals("TIME")) {
-				getTime(p.hour,p.min);
-				switch (p.data) {
-					case "Chicken":
-						deliverTime = CHICKEN_TIME;
-						break;
-					case "Pizza":
-						deliverTime = PIZZA_TIME;
-						break;
-					default:
-						deliverTime = PORK_TIME;
-				}
-				t=deliverTime - timer;
-				sendMsg(parseToJson("TIME",t));
 			} 
+			//else if(methods.equals("TIME")) {
+////				System.out.println(p.hour+" "+p.min+" "+p.method+" "+p.data);
+//				getTime(p.hour,p.min);
+//				switch (p.data) {
+//					case "Chicken":
+//						deliverTime = CHICKEN_TIME;
+//						break;
+//					case "Pizza":
+//						deliverTime = PIZZA_TIME;
+//						break;
+//					default:
+//						deliverTime = PORK_TIME;
+//				}
+//				t=deliverTime - timer;
+//				sendMsg(parseToJson("TIME",t));
+//			} 
 		} else if(recvData.startsWith("OK")) {
 			recvData = recvData.substring(8);//OK\nORDER\n짜르고 json데이터만
 			currentList.put(count, parseOrder(recvData));
@@ -121,8 +138,10 @@ public class Store extends JFrame{
 		}
 	}
 	private String parseToJson(String method, int number) {
-		Packet p = new Packet(method,number);
+		Gson gson = new Gson();
+		Packet_RESPONSE p = new Packet_RESPONSE(method,number);
 		String data = gson.toJson(p);
+		System.out.println("data는 "+data);
 		return data;
 	}
 	private void addUserList(int orderSeq, int port) {
@@ -131,6 +150,7 @@ public class Store extends JFrame{
 		}
 	}
 	private String parseOrder(String recvData) {
+		Gson gson = new Gson();
 		Menu menu = gson.fromJson(recvData,Menu.class);
 		String orderList = menu.main;
 		if(menu.main.equals("Chicken")) {	
@@ -139,7 +159,7 @@ public class Store extends JFrame{
 		} else if(menu.main.equals("Pizza")) {
 			deliverTime += PIZZA_TIME;	
 			cookTime = PIZZA_TIME * 0.8f;
-		} else {
+		} else if(menu.main.equals("Pork")){
 			deliverTime += PORK_TIME;	
 			cookTime = PORK_TIME * 0.8f;
 		}

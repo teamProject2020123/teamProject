@@ -120,7 +120,7 @@ public class OrderFood extends JFrame implements Runnable {
 			int result = JOptionPane.showConfirmDialog(null, "정말 주문을 취소하시겠습니까?"
 					,"CHECK_CANCEL", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
 			if(result == JOptionPane.YES_OPTION) {
-				sendMsg(parseToJson("CANCEL",myOrderSeq));
+				sendMsg(parseToJson("CANCEL",++myOrderSeq));
 				new Thread(()->{
 					try {
 						Thread.sleep(1500);
@@ -138,7 +138,7 @@ public class OrderFood extends JFrame implements Runnable {
 			}
 		});
 		arriveButton.addActionListener(e->{
-			Packet p = new Packet("TIME",hour,min,comboBox[0].getSelectedItem().toString());
+			Packet_TIME p = new Packet_TIME("TIME",comboBox[0].getSelectedItem().toString(),hour,min);
 			String data = gson.toJson(p);
 			sendMsg(data);
 		});
@@ -314,7 +314,7 @@ public class OrderFood extends JFrame implements Runnable {
 		cancelButton.setEnabled(true);
 	}
 	private String parseToJson(String method, int number) {
-		Packet p = new Packet(method,number);
+		Packet_RESPONSE p = new Packet_RESPONSE(method,number);
 		String data = gson.toJson(p);
 		return data;
 	}
@@ -343,16 +343,20 @@ public class OrderFood extends JFrame implements Runnable {
 	}
 	private void recvMsg(String recvData) {
 		if(recvData.startsWith("{")) {
-			Packet p = gson.fromJson(recvData, Packet.class);
+			Packet_RESPONSE p = gson.fromJson(recvData, Packet_RESPONSE.class);
 			String methods = p.method;
+			System.out.println("method = "+p.method);
+//			System.out.println("hour = "+p.hour);
+//			System.out.println("min = "+p.min);
+			System.out.println("number = "+p.number);
 			if(methods.equals("SUCCESS")) {
 				JOptionPane.showMessageDialog(this, "주문에 성공하였습니다.");
 				disableBtn();
-				myOrderSeq = p.hour;
+//				myOrderSeq = p.hour;
 			} else if(methods.equals("TIME")) {
-				ArriveTime(p.hour);
+				ArriveTime(p.number);
 			} else if(methods.equals("mTIME")) {
-				ArriveTime(p.hour);
+				ArriveTime(p.number);
 			}
 		} else if(recvData.startsWith("CANCEL_OK")) {
 			JOptionPane.showMessageDialog(this, "주문이 취소되었습니다..","주문 취소",
