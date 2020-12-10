@@ -36,6 +36,7 @@ public class OrderFood extends JFrame implements Runnable {
 	private InetAddress ip;
 	private DatagramSocket ds;
 	private boolean cancel = true;
+	private boolean moreTime = false;
 	
 	private int hour,min;
 
@@ -73,8 +74,16 @@ public class OrderFood extends JFrame implements Runnable {
 			int result = JOptionPane.showConfirmDialog(null, "주문하시겠습니까?"
 					,"CHECK_ORDER", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
 			if(result == JOptionPane.YES_OPTION) { 
-				getOrderTime();
-				sendMsg(packet);
+				new Thread(()->{
+					getOrderTime();
+					sendMsg(packet);
+					try {
+						Thread.sleep(1500);
+					} catch (InterruptedException e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+					}
+				}).start();
 			}
 		});
 		comboBox[0].addItemListener(e-> {
@@ -128,7 +137,11 @@ public class OrderFood extends JFrame implements Runnable {
 			}
 		});
 		arriveButton.addActionListener(e->{
-			sendMsg("TIME="+hour+":"+min+":"+comboBox[0].getSelectedItem().toString());
+			if(moreTime) {
+				sendMsg("mTIME="+hour+":"+min+":"+comboBox[0].getSelectedItem().toString());
+			} else {
+				sendMsg("TIME="+hour+":"+min+":"+comboBox[0].getSelectedItem().toString());
+			}
 		});
 	}
 	private void parsingJson() {
@@ -148,6 +161,7 @@ public class OrderFood extends JFrame implements Runnable {
 		Gson gson = new Gson();
 		menu = new Menu(list.get(0),list.get(1),list.get(2),list.get(3),list.get(4));
 		packet = "ORDER\n" + gson.toJson(menu);
+		System.out.println(packet);
 	}
 	private void setView() {
 		setTitle("배달의 민족 - 주문하기");
@@ -231,6 +245,7 @@ public class OrderFood extends JFrame implements Runnable {
 		cancelButton.setBounds(221, 228, 97, 23);
 		contentPane.add(cancelButton);
 		cancelButton.setEnabled(false);
+		setResizable(false);
 	}
 	private void setComboBox() {
 		comboBox[1].setModel(new DefaultComboBoxModel(option1.toArray()));
@@ -300,17 +315,17 @@ public class OrderFood extends JFrame implements Runnable {
 		needText.setEnabled(false);
 		cancelButton.setEnabled(true);
 	}
-	private void enableBtn() {
-		orderButton.setEnabled(true);
-		resetButton.setEnabled(true);
-		arriveButton.setEnabled(false);
-		comboBox[0].setEnabled(true);
-		comboBox[1].setEnabled(true);
-		comboBox[2].setEnabled(true);
-		comboBox[3].setEnabled(true);
-		needText.setEnabled(true);
-		cancelButton.setEnabled(false);
-	}
+//	private void enableBtn() {
+//		orderButton.setEnabled(true);
+//		resetButton.setEnabled(true);
+//		arriveButton.setEnabled(false);
+//		comboBox[0].setEnabled(true);
+//		comboBox[1].setEnabled(true);
+//		comboBox[2].setEnabled(true);
+//		comboBox[3].setEnabled(true);
+//		needText.setEnabled(true);
+//		cancelButton.setEnabled(false);
+//	}
 	
 	public void ArriveTime(String msg) {
 		int result = JOptionPane.showConfirmDialog(null, "도착까지 "
@@ -339,6 +354,7 @@ public class OrderFood extends JFrame implements Runnable {
 	private void recvMsg(String recvData) {
 		if(recvData.startsWith("SUCCESS")) {
 			JOptionPane.showMessageDialog(this, "주문에 성공하였습니다.");
+//			moreTime=false;
 			disableBtn();
 		} else if(recvData.startsWith("ORDER_NUMBER")) {
 			recvData = recvData.substring(11);
@@ -352,9 +368,19 @@ public class OrderFood extends JFrame implements Runnable {
 					JOptionPane.INFORMATION_MESSAGE);
 		} else if(recvData.startsWith("CANCEL_FAIL")) {
 			cancel = false;
-		} else if(recvData.startsWith("FAIL")) {
-			JOptionPane.showMessageDialog(this, "주문이 밀려있어 더 이상 주문할 수 없습니다.","주문 실패",
-					JOptionPane.CANCEL_OPTION);
+		} else if(recvData.startsWith("MORE")) {
+				int result = JOptionPane.showConfirmDialog(null, "주문이 밀려있어 시간이 더 소요될 예정입니다. "
+						+ "그래도 주문하시겠습니까??",
+						"CHECK_ORDER", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
+				if(result == JOptionPane.YES_OPTION) {
+					moreTime = true;
+					parsingJson();
+					getOrderTime();
+					sendMsg("OK\n"+packet);
+					System.out.println("OK\n"+packet);
+				} else {
+					sendMsg("NO");
+				}
 		}
 	}
 
