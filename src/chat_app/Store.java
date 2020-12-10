@@ -27,7 +27,7 @@ import com.google.gson.Gson;
 
 public class Store extends JFrame{
 	private DatagramSocket ds;
-	private DefaultListModel model = new DefaultListModel();
+	private DefaultListModel<String> model = new DefaultListModel<String>();
 	private ArrayList<String> data = new ArrayList<>();
 	private HashMap<Integer, String> currentList = new HashMap<Integer, String>();
 	private HashMap<Integer, String> totalList = new HashMap<Integer, String>();
@@ -56,7 +56,9 @@ public class Store extends JFrame{
 			e.printStackTrace();
 		}
 		actionListener();
+
 	}
+
 	private void recvPacket() {
 		try {
 			while(true) {
@@ -80,7 +82,10 @@ public class Store extends JFrame{
 				totalList.put(count, parseOrder(recvData));
 				currentList.put(count, parseOrder(recvData)); //HashMap에 Order 내용 추가
 				updateList();
-				sendMsg(parseToJson("SUCCESS",++orderSeq));
+				System.out.println("deliverTime="+deliverTime);
+				//여기서 deliverTime이 20으로 전달됨 내가 t=deliverTime-timer 한번
+				//더 계산한 이유도 처음에 20으로 들어가서 그랬어
+				sendMsg(parseToJson("SUCCESS",++orderSeq,deliverTime));
 				addUserList(orderSeq,port); //userList에 추가
 			} else { 
 				//시간이 더 걸리는데 괜찮냐는 메시지 전송
@@ -106,7 +111,6 @@ public class Store extends JFrame{
 					deliverTime = PORK_TIME;
 				}
 				int extraSeq = searchOrderCount(packet_TIME.seq);
-				//System.out.println(extraSeq);
 				t = deliverTime - timer + (extraSeq / 3) * 5;
 				if(t<0){
 					t=0;
@@ -125,16 +129,23 @@ public class Store extends JFrame{
 			} 
 		} else if(recvData.startsWith("OK")) {
 			recvData = recvData.substring(8);//OK\nORDER\n짜르고 json데이터만
+			totalList.put(count, parseOrder(recvData));
 			currentList.put(count, parseOrder(recvData));
 			updateList();
 			sendMsg(parseToJson("SUCCESS",++orderSeq));
+			addUserList(orderSeq,port);
 		}
 	}
 	private String parseToJson(String method, int number) {
 		Gson gson = new Gson();
 		Packet_RESPONSE p = new Packet_RESPONSE(method,number);
 		String data = gson.toJson(p);
-		System.out.println("data는 "+data);
+		return data;
+	}
+	private String parseToJson(String method, int number, int time) {
+		Gson gson = new Gson();
+		Packet_initialTime p = new Packet_initialTime(method,number,time);
+		String data = gson.toJson(p);
 		return data;
 	}
 	private void addUserList(int orderSeq, int port) {
@@ -178,11 +189,6 @@ public class Store extends JFrame{
 			}
 		}
 	}
-	private void updateList() {
-		model.addElement(count+"번: "+currentList.get(count));
-		list.setModel(model);
-		count++;
-	}
 	private void actionListener() {
 		showTotalList.addActionListener(e->{
 			if(totalList.size()==0) {
@@ -195,8 +201,39 @@ public class Store extends JFrame{
 				JOptionPane.showMessageDialog(this, data, "총 주문 내역",JOptionPane.INFORMATION_MESSAGE);
 			}
 		});
-		showCanceledList.addActionListener(e->{
-
+		btn3.addActionListener(e->{
+			//선택한 리스트의 인덱스값을 받아옴
+			//선택한 리스트의 인덱스에 존재하는 리스트를 삭제해야한다.
+			/*
+			 * 1. 리스트를 선택하고 버튼 클릭
+			 * 2. 선택한 인덱스의 리스트가 삭제
+			 * 3. 삭제된 리스트의 번호를 읽어옴
+			 * 4. 읽어온 번호에 해당하는 userList의 key를 이용해 해당 포트로 전송
+			 */
+			int index = list.getSelectedIndex();
+			System.out.println("index="+index);
+			for(int i=0;i<model.size();i++) {
+				System.out.println(model.getElementAt(i));
+			}
+			if (index > -1) { //인덱스가 제대로 선택되었을때
+				String data = (String) model.getElementAt(index);
+				System.out.println("msg="+data);
+				String arr[] = data.split("번");
+				int user_key = Integer.parseInt(arr[0]);
+				System.out.println("userkey="+user_key);
+				//userKey에 선택된 리스트의 번호를 입력함.
+				currentList.remove(index);
+				model.remove(index);
+				list.setModel(model);
+				System.out.println("삭제한 index="+index);
+				//인덱스를 삭제하고 리스트를 갱신함
+				
+				int currentPort=userList.get(user_key);
+				sendMsg("DELIVER",currentPort);
+			} else {
+				JOptionPane.showMessageDialog(this, "아무것도 선택되지 않았습니다", "오류",
+						JOptionPane.ERROR_MESSAGE);
+			}
 		});
 		exitButton.addActionListener(e->{
 			//모든 사용자에게 브로드캐스트로 주문이 취소되었음을 알리고 종료함
@@ -216,12 +253,19 @@ public class Store extends JFrame{
 			}
 		});
 	}
+	private void updateList() {
+		model.addElement(count+"번: "+currentList.get(count));
+		list.setModel(model);
+		count++;
+	}
+
 	private void broadcastMsg(String msg) {
 		//userList에 있는 모든 포트에 메시지 보내야함.
 		byte[] buffer = msg.getBytes();
 		DatagramPacket dp;
 		for(int i=1;i<=userList.size();i++) {
 			try {
+				System.out.println("port : "+userList.get(i));
 				dp = new DatagramPacket(buffer,buffer.length,
 						InetAddress.getByName(DEST_IP),userList.get(i));
 				ds.send(dp);
@@ -232,6 +276,17 @@ public class Store extends JFrame{
 		System.out.println("[Notice] : "+msg);
 	}
 	private void sendMsg(String data) {
+		try {
+			byte[] buffer = data.getBytes();
+			DatagramPacket dp = new DatagramPacket(buffer,buffer.length,InetAddress.getByName(DEST_IP),port);
+			ds.send(dp);
+			System.out.println("[Server -> Client] : "+data);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}		
+	}
+	private void sendMsg(String data,int port) {
 		try {
 			byte[] buffer = data.getBytes();
 			DatagramPacket dp = new DatagramPacket(buffer,buffer.length,InetAddress.getByName(DEST_IP),port);
@@ -266,10 +321,10 @@ public class Store extends JFrame{
 		showTotalList.setBounds(350, 25, 150, 23);
 		contentPane.add(showTotalList);
 
-		showCanceledList = new JButton("2");
-		showCanceledList.setFont(new Font("돋움", Font.PLAIN, 12));
-		showCanceledList.setBounds(350, 85, 150, 23);
-		contentPane.add(showCanceledList);
+		//		showCanceledList = new JButton("2");
+		//		showCanceledList.setFont(new Font("돋움", Font.PLAIN, 12));
+		//		showCanceledList.setBounds(350, 85, 150, 23);
+		//		contentPane.add(showCanceledList);
 
 		btn3 = new JButton("3");
 		btn3.setFont(new Font("돋움", Font.PLAIN, 12));

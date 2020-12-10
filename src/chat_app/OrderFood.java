@@ -8,6 +8,7 @@ import java.net.InetAddress;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 
+
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
@@ -23,7 +24,7 @@ public class OrderFood extends JFrame implements Runnable {
 
 	private static final int DEST_PORT = 1004;
 	private static final String DEST_IP = "127.0.0.1";
-	private int myOrderSeq;
+	private int myOrderSeq,myOrderTime;
 	private JPanel contentPane;
 	private JButton orderButton,resetButton,cancelButton,arriveButton;
 	private JComboBox<String> cb;
@@ -344,11 +345,13 @@ public class OrderFood extends JFrame implements Runnable {
 	private void recvMsg(String recvData) {
 		if(recvData.startsWith("{")) {
 			Packet_RESPONSE p = gson.fromJson(recvData, Packet_RESPONSE.class);
+			Packet_initialTime initialTime = gson.fromJson(recvData, Packet_initialTime.class);
 			String methods = p.method;
 			if(methods.equals("SUCCESS")) {
 				JOptionPane.showMessageDialog(this, "주문에 성공하였습니다.");
 				disableBtn();
 				myOrderSeq = p.number;
+				myOrderTime = initialTime.time; //시간을 받아서 저장함
 			} else if(methods.equals("TIME")) {
 				ArriveTime(p.number);
 			} 
@@ -376,6 +379,10 @@ public class OrderFood extends JFrame implements Runnable {
 		} else if(recvData.startsWith("SORRY")){
 			JOptionPane.showMessageDialog(this, "가게의 사정으로 배달이 지연되고 있습니다.죄송합니다.","지연 알림",
 					JOptionPane.INFORMATION_MESSAGE);		
+		} else if(recvData.startsWith("DELIVER")) {
+			JOptionPane.showMessageDialog(this, "주문하신 상품이 배달되었습니다.","알림",
+					JOptionPane.INFORMATION_MESSAGE);
+			System.exit(0);
 		}
 	}
 	public void sendMsg(String msg) {
