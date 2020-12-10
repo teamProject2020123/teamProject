@@ -381,6 +381,10 @@ public class OrderFood extends JFrame implements Runnable {
 				} else {
 					sendMsg("NO");
 				}
+		} else if(recvData.startsWith("CLOSED")) {
+			JOptionPane.showMessageDialog(this, "스토어가 문을 닫았습니다.","종료 알림",
+					JOptionPane.INFORMATION_MESSAGE);
+			System.exit(0);
 		}
 	}
 

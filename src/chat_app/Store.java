@@ -5,6 +5,7 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
+import java.net.UnknownHostException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -123,15 +124,10 @@ public class Store extends JFrame{
 		}
 	}
 	private void addUserList(int orderSeq, int port) {
-//		for(int i=1;i<=userList.size();i++) {
-//			//userList돌면서 port 중복체크
-//			if(userList.get(i)==port) {
-//				break;
-//			} else {
-//				continue;
-//			}
-//		}
-//		userList.put(orderSeq, port);
+		if(!userList.containsValue(port)) {
+			userList.put(orderSeq, port);
+		}
+		System.out.println("userList : "+ userList);
 	}
 	private String parsingJson(String recvData) {
 		Gson gson = new Gson();
@@ -187,7 +183,7 @@ public class Store extends JFrame{
 			}
 		});
 		showCanceledList.addActionListener(e->{
-			
+
 		});
 		exitButton.addActionListener(e->{
 			//모든 사용자에게 브로드캐스트로 주문이 취소되었음을 알리고 종료함
@@ -195,20 +191,34 @@ public class Store extends JFrame{
 					+ "그래도 취소하시겠습니까??",
 					"종료 확인", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
 			if(result == JOptionPane.YES_OPTION) {
-				
+				currentList.clear();
+				model.clear();
+				list.setModel(model);
+				broadcastMsg("CLOSED");
 				System.exit(0);
 			}
 		});
 	}
-	private void broadcastMsg() {
-		
+	private void broadcastMsg(String msg) {
+		//userList에 있는 모든 포트에 메시지 보내야함.
+		byte[] buffer = msg.getBytes();
+		DatagramPacket dp;
+		for(int i=1;i<=userList.size();i++) {
+			try {
+				dp = new DatagramPacket(buffer,buffer.length,
+						InetAddress.getByName(DEST_IP),userList.get(i));
+				ds.send(dp);
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+		System.out.println("[Notice] : "+msg);
 	}
 	private void sendMsg(String data) throws IOException {
-		String msg = data;
-		byte[] buffer = msg.getBytes();
+		byte[] buffer = data.getBytes();
 		DatagramPacket dp = new DatagramPacket(buffer,buffer.length,InetAddress.getByName(DEST_IP),port);
 		ds.send(dp);		
-		System.out.println("[Server -> Client] : "+msg);
+		System.out.println("[Server -> Client] : "+data);
 	}
 	private void setView() {
 		setTitle("Store");
