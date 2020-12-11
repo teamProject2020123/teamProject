@@ -1,132 +1,166 @@
 package chat_app;
 
-import java.awt.BorderLayout;
-import java.awt.EventQueue;
-import javax.swing.*;
-import javax.swing.JFrame;
-import javax.swing.JPanel;
-import javax.swing.border.EmptyBorder;
-import javax.swing.JLabel;
-import javax.swing.JTextPane;
-import javax.swing.JScrollPane;
-import javax.swing.JComboBox;
-import javax.swing.JTextArea;
-import javax.swing.JScrollBar;
-import javax.swing.JOptionPane;
-import java.awt.ScrollPane;
+import java.awt.Font;
 import java.awt.TextArea;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+
 
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.JButton;
-import java.awt.Button;
-import java.awt.Font;
-import java.awt.event.ActionListener;
-import java.awt.event.ItemEvent;
-import java.awt.event.ItemListener;
-import java.util.ArrayList;
-import java.awt.event.ActionEvent;
+import javax.swing.JComboBox;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.border.EmptyBorder;
 
-public class OrderFood extends JFrame {
+import com.google.gson.Gson;
 
+public class OrderFood extends JFrame implements Runnable {
+
+	private static final int DEST_PORT = 1004;
+	private static final String DEST_IP = "127.0.0.1";
+	private int myOrderSeq,myOrderTime;
 	private JPanel contentPane;
-	private UDPmsg udpmsg = new UDPmsg();
-	private JButton btnNewButton;
-	private JComboBox comboBox,comboBox1,comboBox2,comboBox3,cb;
-	private ArrayList<String> main,sub1,sub2,sub3,list;
+	private JButton orderButton,resetButton,cancelButton,arriveButton;
+	private JComboBox<String> cb;
+	private JComboBox<String>[] comboBox = new JComboBox[4];
+	private ArrayList<String> main,option1,option2,option3,list;
+	private JLabel mainLabel,optionLabel1,optionLabel2,optionLabel3;
 	private TextArea needText;
+	private Menu menu;
+	private String packet;
+	private InetAddress ip;
+	private DatagramSocket ds;
+	private boolean cancel = true;
+	private Gson gson = new Gson();
+
+	private int hour,min;
+
 	public OrderFood() {
+		main = new ArrayList<>();
+		option1 = new ArrayList<>();
+		option2 = new ArrayList<>();
+		option3 = new ArrayList<>();
+		main.add("Chicken");
+		main.add("Pizza");
+		main.add("Pork");
 		setView();
-		btnNewButton = new JButton("\uC8FC\uBB38\uD558\uAE30");
-		btnNewButton.setFont(new Font("µ¸¿ò", Font.PLAIN, 12));
-		btnNewButton.setBounds(62, 200, 97, 23);
-		contentPane.add(btnNewButton);
-		btnNewButton.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent arg0) {
-				list = new ArrayList<>();
-				list.add(comboBox.getSelectedItem().toString());
-				list.add(comboBox1.getSelectedItem().toString());
-				list.add(comboBox2.getSelectedItem().toString());
-				list.add(comboBox3.getSelectedItem().toString());
-				
-				String t = needText.getText();
-				if(t.equals("")) {
-					list.add("Ãß°¡ ÁÖ¹®»çÇ× ¾øÀ½");
-				} else list.add(needText.getText());
-				
-				JOptionPane.showConfirmDialog(null, "¾Æ·¡ ³»¿ëÀÌ ¸Â³ª¿ä?\n"
-						+ list.get(0) +"\n"
-						+ "+)"+ list.get(1) +"\n"
-						+ "+)"+ list.get(2) +"\n"
-						+ "+)"+ list.get(3) +"\n"
-						+ "+)"+ list.get(4) +"\n", "CHECK_ORDER", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
-				udpmsg.sendMsg("SUCCESS");
-				JOptionPane.showMessageDialog(null, "¿¹»ó ¼Ò¿ä ½Ã°£Àº 30~40ºĞÀÔ´Ï´Ù.");
+		orderButton = new JButton("ì£¼ë¬¸í•˜ê¸°");
+		orderButton.setFont(new Font("ë‹ì›€", Font.PLAIN, 12));
+		orderButton.setBounds(65, 200, 97, 23);
+		contentPane.add(orderButton);
+		actionListener();
+
+		try {
+			ip = InetAddress.getByName(DEST_IP);
+			ds = new DatagramSocket();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+		Thread th = new Thread(this);
+		th.start();
+		this.setVisible(true);
+	}
+	private void actionListener() {
+		orderButton.addActionListener(e-> {
+			parseOrder();
+			int result = JOptionPane.showConfirmDialog(null, "ì£¼ë¬¸í•˜ì‹œê² ìŠµë‹ˆê¹Œ?"
+					,"CHECK_ORDER", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
+			if(result == JOptionPane.YES_OPTION) { 
+				new Thread(()->{
+					getOrderTime();
+					sendMsg(packet);
+					try {
+						Thread.sleep(1500);
+					} catch (InterruptedException e1) {
+						e1.printStackTrace();
+					}
+				}).start();
 			}
 		});
-		comboBox.addItemListener(e-> {
-			//			System.out.println("selected change");
-			cb = (JComboBox) e.getSource();
-			String index = (String) cb.getSelectedItem();
-			if(index == "Ä¡Å²") {
-				sub1.clear();
-				sub2.clear();
-				sub3.clear();
-				sub1.add("¼ø»ì");
-				sub1.add("»À");
-				sub2.add("Äİ¶ó 500ml");
-				sub2.add("»çÀÌ´Ù 500ml");
-				sub2.add("Äİ¶ó 1.5L");
-				sub2.add("»çÀÌ´Ù 1.5L");
-				sub3.add("¼±ÅÃ ¾ÈÇÔ");
-				sub3.add("¾ç³ä¼Ò½º Ãß°¡");
+		comboBox[0].addItemListener(e-> {
+			comboBox[0] = (JComboBox) e.getSource();
+			String index = (String) comboBox[0].getSelectedItem();
+			if(index == "Chicken") {
+				setChicken();
 				setComboBox();
+				comboBox[3].setVisible(true);
 			}
-			else if(index=="ÇÇÀÚ") {
-				sub1.clear();
-				sub2.clear();
-				sub3.clear();
-				sub1.add("¾øÀ½");
-				sub1.add("Ä¡ÁîÅ©·¯½ºÆ®");
-				sub2.add("Äİ¶ó 500ml");
-				sub2.add("»çÀÌ´Ù 500ml");
-				sub2.add("Äİ¶ó 1.5L");
-				sub2.add("»çÀÌ´Ù 1.5L");
-				sub3.add("¼±ÅÃ ¾ÈÇÔ");
-				sub3.add("¾î´Ï¾ğ¼Ò½º Ãß°¡");
+			else if(index=="Pizza") {
+				setPizza();
 				setComboBox();
-			} else {
-				sub1.clear();
-				sub2.clear();
-				sub3.clear();
-				sub1.add("º¸Åë¸À");
-				sub1.add("¼øÇÑ¸À");
-				sub1.add("¸Å¿î¸À");
-				sub1.add("¾ÆÁÖ¸Å¿î¸À");
-				sub2.add("Äİ¶ó 500ml");
-				sub2.add("»çÀÌ´Ù 500ml");
-				sub2.add("Äİ¶ó 1.5L");
-				sub2.add("»çÀÌ´Ù 1.5L");
-				sub3.add("¼±ÅÃ ¾ÈÇÔ");
+				comboBox[3].setVisible(true);
+
+			} else if(index=="Pork"){
+				setPork();
 				setComboBox();
+				comboBox[3].setVisible(false);
 			}
+		});
+		resetButton.addActionListener(e-> {
+			main.clear();
+			main.add("Chicken");
+			main.add("Pizza");
+			main.add("Pork");
+			comboBox[0].setModel(new DefaultComboBoxModel(main.toArray()));
+			setChicken();
+			setComboBox();
+			needText.setText("");
+		});
+		cancelButton.addActionListener(e-> { //ì£¼ë¬¸ ì·¨ì†Œ ë²„íŠ¼
+			int result = JOptionPane.showConfirmDialog(null, "ì •ë§ ì£¼ë¬¸ì„ ì·¨ì†Œí•˜ì‹œê² ìŠµë‹ˆê¹Œ?"
+					,"CHECK_CANCEL", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
+			if(result == JOptionPane.YES_OPTION) {
+				sendMsg(parseToJson("CANCEL",myOrderSeq)); //json íƒ€ì…ìœ¼ë¡œ method=CANCEL, number=myOrderSeq ì „ë‹¬
+				new Thread(()->{ //CANCEL requestì— ëŒ€í•œ responseë¥¼ ê¸°ë‹¤ë¦¬ê¸° ìœ„í•´ ë³„ë„ì˜ Threadë¥¼ ìƒì„±í•¨
+					try {
+						Thread.sleep(1500);
+					} catch (InterruptedException e1) {
+						e1.printStackTrace();
+					}
+					if(cancel) {
+						System.exit(0);											
+					} else {
+						JOptionPane.showMessageDialog(this, "ì´ë¯¸ ì£¼ë¬¸í•˜ì‹  ìŒì‹ì´ ë§Œë“¤ì–´ì§€ê³  ìˆì–´ì„œ ì·¨ì†Œí•  ìˆ˜ ì—†ìŠµë‹ˆë‹¤.","ì·¨ì†Œ ì‹¤íŒ¨",
+								
+								JOptionPane.CANCEL_OPTION);
+					}
+				}).start();
+			}
+		});
+		arriveButton.addActionListener(e->{ //ì‚¬ìš©ìê°€ ì„œë²„ì—ê²Œ ë„ì°© ì‹œê°„ì„ ìš”ì²­í•˜ëŠ” ë²„íŠ¼
+			Packet_TIME p = new Packet_TIME("TIME",comboBox[0].getSelectedItem().toString(),hour,min,myOrderTime);
+			String data = gson.toJson(p);
+			sendMsg(data);
+			//method=TIME, ì–´ë–¤ ìŒì‹ì„ ì„ íƒí–ˆëŠ”ì§€, í˜„ì¬ ì‚¬ìš©ìì˜ ì‹œê°„, ì£¼ë¬¸ë²ˆí˜¸ë¥¼ jsoníƒ€ì… ë°ì´í„°ë¡œ ì „ì†¡í•¨
 		});
 	}
+	private void parseOrder() { //ì˜¤ë”ë¥¼ json dataë¡œ íŒŒì‹±í•œë‹¤.
+		list = new ArrayList<>();
+		for (int i = 0; i < comboBox.length; i++) {
+			if(comboBox[i].getSelectedItem().equals("No")) {
+				list.add("");
+			} else {
+				list.add(comboBox[i].getSelectedItem().toString());
+			}
+		}
+		if(needText.getText().equals("")) {
+			list.add("");
+		} else {
+			list.add(needText.getText());
+		}
+		menu = new Menu(list.get(0),list.get(1),list.get(2),list.get(3),list.get(4));
+		packet = "ORDER" + gson.toJson(menu);
+		System.out.println(packet);
+	}
 	private void setView() {
-		main = new ArrayList<>();
-		sub1 = new ArrayList<>();
-		sub2 = new ArrayList<>();
-		sub3 = new ArrayList<>();
-		main.add("Ä¡Å²");
-		main.add("ÇÇÀÚ");
-		main.add("Á·¹ß");
-		sub1.add("¼ø»ì");
-		sub1.add("»À");
-		sub2.add("Äİ¶ó 500ml");
-		sub2.add("»çÀÌ´Ù 500ml");
-		sub2.add("Äİ¶ó 1.5L");
-		sub2.add("»çÀÌ´Ù 1.5L");
-		sub3.add("¼±ÅÃ ¾ÈÇÔ");
-		sub3.add("¾ç³ä¼Ò½º Ãß°¡");
+		setTitle("ë°°ë‹¬ì˜ ë¯¼ì¡± - ì£¼ë¬¸í•˜ê¸°");
 
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		setBounds(100, 100, 450, 300);
@@ -135,49 +169,55 @@ public class OrderFood extends JFrame {
 		setContentPane(contentPane);
 		contentPane.setLayout(null);
 
-		JLabel lblNewLabel = new JLabel("\uBA54\uC778 \uBA54\uB274");
-		lblNewLabel.setFont(new Font("µ¸¿ò", Font.PLAIN, 12));
-		lblNewLabel.setBounds(12, 50, 57, 15);
-		contentPane.add(lblNewLabel);
+		mainLabel = new JLabel("ë©”ì¸ ë©”ë‰´");
+		mainLabel.setFont(new Font("ë‹ì›€", Font.PLAIN, 12));
+		mainLabel.setBounds(12, 50, 57, 15);
+		contentPane.add(mainLabel);
 
-		JLabel lblNewLabel_1 = new JLabel("\uCD94\uAC00 \uC635\uC1581");
-		lblNewLabel_1.setFont(new Font("µ¸¿ò", Font.PLAIN, 12));
-		lblNewLabel_1.setBounds(12, 85, 70, 15);
-		contentPane.add(lblNewLabel_1);
+		optionLabel1 = new JLabel("ì¶”ê°€ ë©”ë‰´1");
+		optionLabel1.setFont(new Font("ë‹ì›€", Font.PLAIN, 12));
+		optionLabel1.setBounds(12, 85, 70, 15);
+		contentPane.add(optionLabel1);
 
-		JLabel lblNewLabel_2 = new JLabel("\uCD94\uAC00 \uC635\uC1582");
-		lblNewLabel_2.setFont(new Font("µ¸¿ò", Font.PLAIN, 12));
-		lblNewLabel_2.setBounds(12, 120, 70, 15);
-		contentPane.add(lblNewLabel_2);
+		optionLabel2 = new JLabel("ì¶”ê°€ ë©”ë‰´2");
+		optionLabel2.setFont(new Font("ë‹ì›€", Font.PLAIN, 12));
+		optionLabel2.setBounds(12, 120, 70, 15);
+		contentPane.add(optionLabel2);
 
-		JLabel lblNewLabel_2_1 = new JLabel("\uCD94\uAC00 \uC635\uC1583");
-		lblNewLabel_2_1.setFont(new Font("µ¸¿ò", Font.PLAIN, 12));
-		lblNewLabel_2_1.setBounds(12, 155, 70, 15);
-		contentPane.add(lblNewLabel_2_1);
+		optionLabel3 = new JLabel("ì¶”ê°€ ë©”ë‰´3");
+		optionLabel3.setFont(new Font("ë‹ì›€", Font.PLAIN, 12));
+		optionLabel3.setBounds(12, 155, 70, 15);
+		contentPane.add(optionLabel3);
 
-		comboBox = new JComboBox(main.toArray());
-		comboBox.setBounds(92, 46, 138, 23);
-		contentPane.add(comboBox);
+		setChicken();
 
-		comboBox1 = new JComboBox(sub1.toArray());
-		comboBox1.setBounds(92, 81, 138, 23);
-		contentPane.add(comboBox1);
+		comboBox[0] = new JComboBox(main.toArray());
+		comboBox[0].setBounds(92, 45, 138, 23);
+		comboBox[0].setFont(new Font("ë‹ì›€",Font.PLAIN,12));
+		contentPane.add(comboBox[0]);
 
-		comboBox2 = new JComboBox(sub2.toArray());
-		comboBox2.setBounds(92, 116, 138, 23);
-		contentPane.add(comboBox2);
+		comboBox[1] = new JComboBox(option1.toArray());
+		comboBox[1].setBounds(92, 80, 138, 23);
+		comboBox[1].setFont(new Font("ë‹ì›€",Font.PLAIN,12));
+		contentPane.add(comboBox[1]);
 
-		comboBox3 = new JComboBox(sub3.toArray());
-		comboBox3.setBounds(92, 151, 138, 23);
-		contentPane.add(comboBox3);
+		comboBox[2] = new JComboBox(option2.toArray());
+		comboBox[2].setBounds(92, 115, 138, 23);
+		comboBox[2].setFont(new Font("ë‹ì›€",Font.PLAIN,12));
+		contentPane.add(comboBox[2]);
 
-		JLabel lblNewLabel_3 = new JLabel("\uC8FC\uBB38\uC2DC \uC694\uAD6C\uC0AC\uD56D");
-		lblNewLabel_3.setFont(new Font("µ¸¿ò", Font.PLAIN, 12));
+		comboBox[3] = new JComboBox(option3.toArray());
+		comboBox[3].setBounds(92, 150, 138, 23);
+		comboBox[3].setFont(new Font("ë‹ì›€",Font.PLAIN,12));
+		contentPane.add(comboBox[3]);
+
+		JLabel lblNewLabel_3 = new JLabel("ë°°ë‹¬ì‹œ ìš”ì²­ì‚¬í•­");
+		lblNewLabel_3.setFont(new Font("ë‹ì›€", Font.PLAIN, 12));
 		lblNewLabel_3.setBounds(242, 50, 118, 15);
 		contentPane.add(lblNewLabel_3);
 
-		JLabel lblNewLabel_4 = new JLabel("\uBB34\uC5C7\uC744 \uB3C4\uC640\uB4DC\uB9B4\uAE4C\uC694?");
-		lblNewLabel_4.setFont(new Font("µ¸¿ò", Font.PLAIN, 12));
+		JLabel lblNewLabel_4 = new JLabel("ë¬´ì—‡ì„ ë„ì™€ë“œë¦´ê¹Œìš”?");
+		lblNewLabel_4.setFont(new Font("ë‹ì›€", Font.PLAIN, 12));
 		lblNewLabel_4.setBounds(147, 10, 163, 15);
 		contentPane.add(lblNewLabel_4);
 
@@ -185,45 +225,179 @@ public class OrderFood extends JFrame {
 		needText.setBounds(238, 81, 186, 94);
 		contentPane.add(needText);
 
-		JButton clearBtn = new JButton("\uCD08\uAE30\uD654");
-		clearBtn.addActionListener(e-> {
-			main.clear();
-			sub1.clear();
-			sub2.clear();
-			sub3.clear();
-			main.add("Ä¡Å²");
-			main.add("ÇÇÀÚ");
-			main.add("Á·¹ß");
-			sub1.add("¼ø»ì");
-			sub1.add("»À");
-			sub2.add("Äİ¶ó 500ml");
-			sub2.add("»çÀÌ´Ù 500ml");
-			sub2.add("Äİ¶ó 1.5L");
-			sub2.add("»çÀÌ´Ù 1.5L");
-			sub3.add("¼±ÅÃ ¾ÈÇÔ");
-			sub3.add("¾ç³ä¼Ò½º Ãß°¡");
-			comboBox.setModel(new DefaultComboBoxModel(main.toArray()));
-			setComboBox();
-			needText.setText("");
-		});
-		clearBtn.setFont(new Font("µ¸¿ò", Font.PLAIN, 12));
-		clearBtn.setBounds(171, 200, 97, 23);
-		contentPane.add(clearBtn);
+		arriveButton = new JButton("ë„ì°©ì‹œê°„");
+		arriveButton.setFont(new Font("ë‹ì›€", Font.PLAIN, 12));
+		arriveButton.setBounds(221, 200, 97, 23);
+		contentPane.add(arriveButton);
+		arriveButton.setEnabled(false);
 
-		JButton cancelBtn = new JButton("\uC8FC\uBB38 \uCDE8\uC18C");
-		cancelBtn.addActionListener(e-> {
-			FrameExam frameExam = new FrameExam();
-			frameExam.setVisible(true);
-			dispose();
-		});
-		cancelBtn.setFont(new Font("µ¸¿ò", Font.PLAIN, 12));
-		cancelBtn.setBounds(280, 200, 97, 23);
-		contentPane.add(cancelBtn);
+		resetButton = new JButton("ì´ˆê¸°í™”");
+		resetButton.setFont(new Font("ë‹ì›€", Font.PLAIN, 12));
+		resetButton.setBounds(65, 228, 97, 23);
+		contentPane.add(resetButton);
+
+		cancelButton = new JButton("ì£¼ë¬¸ì·¨ì†Œ");
+		cancelButton.setFont(new Font("ë‹ì›€", Font.PLAIN, 12));
+		cancelButton.setBounds(221, 228, 97, 23);
+		contentPane.add(cancelButton);
+		cancelButton.setEnabled(false);
+		setResizable(false);
 	}
 	private void setComboBox() {
-		comboBox1.setModel(new DefaultComboBoxModel(sub1.toArray()));
-		comboBox2.setModel(new DefaultComboBoxModel(sub2.toArray()));
-		comboBox3.setModel(new DefaultComboBoxModel(sub3.toArray()));
+		comboBox[1].setModel(new DefaultComboBoxModel(option1.toArray()));
+		comboBox[2].setModel(new DefaultComboBoxModel(option2.toArray()));
+		comboBox[3].setModel(new DefaultComboBoxModel(option3.toArray()));
 	}
-	
+	private void setPork() {
+
+		option1.clear();
+		option2.clear();
+		option3.clear();
+		optionLabel1.setText("ë§µê¸°");
+		optionLabel2.setText("ìŒë£Œ");
+		optionLabel3.setText("");
+		option1.add("Normal");
+		option1.add("No Hot");
+		option1.add("Hot");
+		option1.add("Very Hot");
+		option2.add("Coke 500ml");
+		option2.add("Cider 500ml");
+		option2.add("Coke 1.5L");
+		option2.add("Cider 1.5L");
+		option3.add("No");
+	}
+	private void setPizza() {
+
+		option1.clear();
+		option2.clear();
+		option3.clear();
+		optionLabel1.setText("í† í•‘ ì¶”ê°€");
+		optionLabel2.setText("ìŒë£Œ");
+		optionLabel3.setText("ì†ŒìŠ¤ ì¶”ê°€");
+		option1.add("Normal");
+		option1.add("Cheese Crust");
+		option2.add("Coke 500ml");
+		option2.add("Cider 500ml");
+		option2.add("Coke 1.5L");
+		option2.add("Cider 1.5L");
+		option3.add("No");
+		option3.add("Add Onion Source");
+	}
+	private void setChicken() {
+
+		option1.clear();
+		option2.clear();
+		option3.clear();
+		optionLabel1.setText("ë¼ˆ,ìˆœì‚´ ì„ íƒ");
+		optionLabel2.setText("ìŒë£Œ");
+		optionLabel3.setText("ì†ŒìŠ¤ ì¶”ê°€");
+		option1.add("Boneless");
+		option1.add("Bone");
+		option2.add("Coke 500ml");
+		option2.add("Cider 500ml");
+		option2.add("Coke 1.5L");
+		option2.add("Cider 1.5L");
+		option3.add("No");
+		option3.add("Add Hot Source");
+	}
+	private void disableBtn() {
+		orderButton.setEnabled(false);
+		resetButton.setEnabled(false);
+		arriveButton.setEnabled(true);
+		comboBox[0].setEnabled(false);
+		comboBox[1].setEnabled(false);
+		comboBox[2].setEnabled(false);
+		comboBox[3].setEnabled(false);
+		needText.setEnabled(false);
+		cancelButton.setEnabled(true);
+	}
+	private String parseToJson(String method, int number) {
+		Packet_RESPONSE p = new Packet_RESPONSE(method,number);
+		String data = gson.toJson(p);
+		return data;
+	}
+	public void ArriveTime(int number) {
+		int result = JOptionPane.showConfirmDialog(null, "ë„ì°©ê¹Œì§€ "
+				+ number +"ë¶„ ë‚¨ì•˜ìŠµë‹ˆë‹¤.","Arrive_Time", JOptionPane.CLOSED_OPTION, JOptionPane.QUESTION_MESSAGE);
+		if(result == JOptionPane.CLOSED_OPTION) { 
+			dispose();
+		}
+	}
+	@Override
+	public void run() {
+		while( true ) { 
+			byte[] buf = new byte[1024];
+			DatagramPacket packet = new DatagramPacket(buf, buf.length);
+			try {
+				ds.receive(packet);
+				String recvData = new String(packet.getData(), 0, packet.getLength());
+				recvMsg(recvData);
+			} catch (Exception e) {
+				ds.close();
+				e.printStackTrace();
+				break;
+			} 
+		}
+	}
+	private void recvMsg(String recvData) {
+		if(recvData.startsWith("{")) {
+			Packet_RESPONSE p = gson.fromJson(recvData, Packet_RESPONSE.class);
+			Packet_initialTime initialTime = gson.fromJson(recvData, Packet_initialTime.class);
+			String methods = p.method;
+			if(methods.equals("SUCCESS")) {
+				JOptionPane.showMessageDialog(this, "ì£¼ë¬¸ì— ì„±ê³µí•˜ì˜€ìŠµë‹ˆë‹¤.");
+				disableBtn();
+				myOrderSeq = p.number;
+				myOrderTime = initialTime.time; //ì‹œê°„ì„ ë°›ì•„ì„œ ì €ì¥í•¨
+			} else if(methods.equals("TIME")) {
+				ArriveTime(p.number);
+			} 
+		} else if(recvData.startsWith("CANCEL_OK")) { //ì£¼ë¬¸ì´ ì •ìƒì ìœ¼ë¡œ ì·¨ì†Œë˜ì—ˆë‹¤ëŠ” ì‘ë‹µ
+			JOptionPane.showMessageDialog(this, "ì£¼ë¬¸ì´ ì·¨ì†Œë˜ì—ˆìŠµë‹ˆë‹¤..","ì£¼ë¬¸ ì·¨ì†Œ",
+					JOptionPane.INFORMATION_MESSAGE);
+		} else if(recvData.startsWith("CANCEL_FAIL")) { //ì£¼ë¬¸ì„ ì·¨ì†Œí•  ìˆ˜ì—†ë‹¤ëŠ” ì‘ë‹µ
+			cancel = false;
+		} else if(recvData.startsWith("MORE")) {
+			int result = JOptionPane.showConfirmDialog(null, "ì£¼ë¬¸ì´ ë°€ë ¤ìˆì–´ ì‹œê°„ì´ ë” ì†Œìš”ë  ì˜ˆì •ì…ë‹ˆë‹¤. "
+					+ "ê·¸ë˜ë„ ì£¼ë¬¸í•˜ì‹œê² ìŠµë‹ˆê¹Œ??",
+					"CHECK_ORDER", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
+			if(result == JOptionPane.YES_OPTION) {
+				parseOrder();
+				getOrderTime();
+				sendMsg("OK\n"+packet);
+			} else {
+				sendMsg("NO");
+			}
+		} else if(recvData.startsWith("CLOSED")) {
+			JOptionPane.showMessageDialog(this, "ìŠ¤í† ì–´ê°€ ë¬¸ì„ ë‹«ì•˜ìŠµë‹ˆë‹¤.","ì¢…ë£Œ ì•Œë¦¼",
+					JOptionPane.INFORMATION_MESSAGE);
+			System.exit(0);
+		} else if(recvData.startsWith("SORRY")){
+			JOptionPane.showMessageDialog(this, "ê°€ê²Œì˜ ì‚¬ì •ìœ¼ë¡œ ë°°ë‹¬ì´ ì§€ì—°ë˜ê³  ìˆìŠµë‹ˆë‹¤.ì£„ì†¡í•©ë‹ˆë‹¤.","ì§€ì—° ì•Œë¦¼",
+					JOptionPane.INFORMATION_MESSAGE);		
+		} else if(recvData.startsWith("DELIVER")) {
+			JOptionPane.showMessageDialog(this, "ì£¼ë¬¸í•˜ì‹  ìƒí’ˆì´ ë°°ë‹¬ë˜ì—ˆìŠµë‹ˆë‹¤.","ì•Œë¦¼",
+					JOptionPane.INFORMATION_MESSAGE);
+			System.exit(0);
+		}
+	}
+	public void sendMsg(String msg) {
+		try {
+			byte[] buffer = msg.getBytes();
+			DatagramPacket dp = new DatagramPacket(buffer, buffer.length, ip, DEST_PORT);
+			ds.send(dp);
+			System.out.println("[Client -> Server] : "+msg);
+		} catch (Exception e) {
+			ds.close();
+			e.printStackTrace();
+		}
+	}
+	private void getOrderTime() {
+		LocalDateTime timePoint = LocalDateTime.now();
+		hour = timePoint.getHour();
+		min = timePoint.getMinute();		
+	}
+	public static void main(String[] args) {
+		OrderFood orderFood = new OrderFood();
+	}
 }
