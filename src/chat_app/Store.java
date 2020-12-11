@@ -93,6 +93,16 @@ public class Store extends JFrame{
 			String methods = response.method;
 			if(methods.equals("TIME")) {
 				getTime(packet_TIME.hour,packet_TIME.min);
+				switch(packet_TIME.data) {
+				case "Chicken" :
+					deliverTime = CHICKEN_TIME;
+					break;
+				case "Pizza" :
+					deliverTime = PIZZA_TIME;
+					break;
+				case "Pork" :
+					deliverTime = PORK_TIME;
+				}
 				deliverTime = packet_TIME.orderTime;
 				t = deliverTime - timer;
 				if(t<0){

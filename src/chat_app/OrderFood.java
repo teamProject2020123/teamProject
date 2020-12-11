@@ -23,6 +23,7 @@ import com.google.gson.Gson;
 public class OrderFood extends JFrame implements Runnable {
 
 	private static final int DEST_PORT = 1004;
+//	private static final String DEST_IP = "172.18.15.142";
 	private static final String DEST_IP = "127.0.0.1";
 	private int myOrderSeq,myOrderTime;
 	private JPanel contentPane;
@@ -128,7 +129,6 @@ public class OrderFood extends JFrame implements Runnable {
 						System.exit(0);											
 					} else {
 						JOptionPane.showMessageDialog(this, "이미 주문하신 음식이 만들어지고 있어서 취소할 수 없습니다.","취소 실패",
-								
 								JOptionPane.CANCEL_OPTION);
 					}
 				}).start();
@@ -378,6 +378,7 @@ public class OrderFood extends JFrame implements Runnable {
 		} else if(recvData.startsWith("DELIVER")) {
 			JOptionPane.showMessageDialog(this, "주문하신 상품이 배달되었습니다.","알림",
 					JOptionPane.INFORMATION_MESSAGE);
+			sendMsg("ACK");
 			System.exit(0);
 		}
 	}
