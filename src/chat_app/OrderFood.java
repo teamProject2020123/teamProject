@@ -82,7 +82,6 @@ public class OrderFood extends JFrame implements Runnable {
 					try {
 						Thread.sleep(1500);
 					} catch (InterruptedException e1) {
-						// TODO Auto-generated catch block
 						e1.printStackTrace();
 					}
 				}).start();
