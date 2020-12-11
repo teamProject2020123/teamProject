@@ -93,17 +93,6 @@ public class Store extends JFrame{
 			String methods = response.method;
 			if(methods.equals("TIME")) {
 				getTime(packet_TIME.hour,packet_TIME.min);
-				switch (packet_TIME.data) {
-				case "Chicken":
-					deliverTime = CHICKEN_TIME;
-					break;
-				case "Pizza":
-					deliverTime = PIZZA_TIME;
-					break;
-				default:
-					deliverTime = PORK_TIME;
-				}
-				
 				deliverTime = packet_TIME.orderTime;
 				t = deliverTime - timer;
 				if(t<0){
@@ -113,7 +102,6 @@ public class Store extends JFrame{
 				else {
 					sendMsg(parseToJson("TIME",t));
 				}
-
 			} else if(methods.equals("CANCEL")) {
 				if(t>cookTime) { //요리가 시작되면 주문 취소를 할 수 없게 하기 위해 작성함
 					cancelOrder(response.number);
