@@ -69,7 +69,7 @@ public class OrderFood extends JFrame implements Runnable {
 	}
 	private void actionListener() {
 		orderButton.addActionListener(e-> {
-			parseOrder();
+			parseOrder(); //일반 데이터를 json 객체로 parsing하는 메소드
 			int result = JOptionPane.showConfirmDialog(null, "주문하시겠습니까?"
 					,"CHECK_ORDER", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
 			if(result == JOptionPane.YES_OPTION) { 
@@ -312,7 +312,7 @@ public class OrderFood extends JFrame implements Runnable {
 		cancelButton.setEnabled(true);
 	}
 	private String parseToJson(String method, int number) {
-		Packet_RESPONSE p = new Packet_RESPONSE(method,number);
+		Packet p = new Packet(method,number);
 		String data = gson.toJson(p);
 		return data;
 	}
@@ -341,7 +341,7 @@ public class OrderFood extends JFrame implements Runnable {
 	}
 	private void recvMsg(String recvData) {
 		if(recvData.startsWith("{")) {
-			Packet_RESPONSE p = gson.fromJson(recvData, Packet_RESPONSE.class);
+			Packet p = gson.fromJson(recvData, Packet.class);
 			Packet_initialTime initialTime = gson.fromJson(recvData, Packet_initialTime.class);
 			String methods = p.method;
 			if(methods.equals("SUCCESS")) {
