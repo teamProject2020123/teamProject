@@ -39,7 +39,7 @@ public class Store extends JFrame{
 	private JPanel contentPane;
 	private JList<String> list;
 	private int count =1;
-	private JButton showTotalList,showCanceledList,btn3,exitButton;
+	private JButton showTotalList,showCanceledList,deliverButton,exitButton;
 	private int deliverTime=0;
 	private final int CHICKEN_TIME = 10;
 	private final int PIZZA_TIME = 12;
@@ -201,9 +201,7 @@ public class Store extends JFrame{
 				JOptionPane.showMessageDialog(this, data, "총 주문 내역",JOptionPane.INFORMATION_MESSAGE);
 			}
 		});
-		btn3.addActionListener(e->{
-			//선택한 리스트의 인덱스값을 받아옴
-			//선택한 리스트의 인덱스에 존재하는 리스트를 삭제해야한다.
+		deliverButton.addActionListener(e->{
 			/*
 			 * 1. 리스트를 선택하고 버튼 클릭
 			 * 2. 선택한 인덱스의 리스트가 삭제
@@ -211,26 +209,22 @@ public class Store extends JFrame{
 			 * 4. 읽어온 번호에 해당하는 userList의 key를 이용해 해당 포트로 전송
 			 */
 			int index = list.getSelectedIndex();
-			System.out.println("index="+index);
 			for(int i=0;i<model.size();i++) {
 				System.out.println(model.getElementAt(i));
 			}
 			if (index > -1) { //인덱스가 제대로 선택되었을때
 				String data = (String) model.getElementAt(index);
-				System.out.println("msg="+data);
 				String arr[] = data.split("번");
 				int user_key = Integer.parseInt(arr[0]);
-				System.out.println("userkey="+user_key);
 				//userKey에 선택된 리스트의 번호를 입력함.
 				currentList.remove(index);
 				model.remove(index);
 				list.setModel(model);
-				System.out.println("삭제한 index="+index);
 				//인덱스를 삭제하고 리스트를 갱신함
 				
 				int currentPort=userList.get(user_key);
 				sendMsg("DELIVER",currentPort);
-			} else {
+			} else { //리스트를 선택하지 않고 배송 버튼을 눌렀을 때
 				JOptionPane.showMessageDialog(this, "아무것도 선택되지 않았습니다", "오류",
 						JOptionPane.ERROR_MESSAGE);
 			}
@@ -321,10 +315,10 @@ public class Store extends JFrame{
 		showTotalList.setBounds(350, 25, 150, 23);
 		contentPane.add(showTotalList);
 
-		btn3 = new JButton("3");
-		btn3.setFont(new Font("돋움", Font.PLAIN, 12));
-		btn3.setBounds(350, 145, 150, 23);
-		contentPane.add(btn3);
+		deliverButton = new JButton("배송하기");
+		deliverButton.setFont(new Font("돋움", Font.PLAIN, 12));
+		deliverButton.setBounds(350, 145, 150, 23);
+		contentPane.add(deliverButton);
 
 		exitButton = new JButton("4");
 		exitButton.setFont(new Font("돋움", Font.PLAIN, 12));

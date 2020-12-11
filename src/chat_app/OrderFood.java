@@ -51,7 +51,6 @@ public class OrderFood extends JFrame implements Runnable {
 		main.add("Pizza");
 		main.add("Pork");
 		setView();
-		//		setChicken();
 		orderButton = new JButton("주문하기");
 		orderButton.setFont(new Font("돋움", Font.PLAIN, 12));
 		orderButton.setBounds(65, 200, 97, 23);
@@ -62,7 +61,6 @@ public class OrderFood extends JFrame implements Runnable {
 			ip = InetAddress.getByName(DEST_IP);
 			ds = new DatagramSocket();
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 
@@ -116,16 +114,15 @@ public class OrderFood extends JFrame implements Runnable {
 			setComboBox();
 			needText.setText("");
 		});
-		cancelButton.addActionListener(e-> {
+		cancelButton.addActionListener(e-> { //주문 취소 버튼
 			int result = JOptionPane.showConfirmDialog(null, "정말 주문을 취소하시겠습니까?"
 					,"CHECK_CANCEL", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
 			if(result == JOptionPane.YES_OPTION) {
-				sendMsg(parseToJson("CANCEL",myOrderSeq));
-				new Thread(()->{
+				sendMsg(parseToJson("CANCEL",myOrderSeq)); //json 타입으로 method=CANCEL, number=myOrderSeq 전달
+				new Thread(()->{ //CANCEL request에 대한 response를 기다리기 위해 별도의 Thread를 생성함
 					try {
 						Thread.sleep(1500);
 					} catch (InterruptedException e1) {
-						// TODO Auto-generated catch block
 						e1.printStackTrace();
 					}
 					if(cancel) {
@@ -137,13 +134,14 @@ public class OrderFood extends JFrame implements Runnable {
 				}).start();
 			}
 		});
-		arriveButton.addActionListener(e->{
+		arriveButton.addActionListener(e->{ //사용자가 서버에게 도착 시간을 요청하는 버튼
 			Packet_TIME p = new Packet_TIME("TIME",comboBox[0].getSelectedItem().toString(),hour,min,myOrderSeq);
 			String data = gson.toJson(p);
 			sendMsg(data);
+			//method=TIME, 어떤 음식을 선택했는지, 현재 사용자의 시간, 주문번호를 json타입 데이터로 전송함
 		});
 	}
-	private void parseOrder() {
+	private void parseOrder() { //오더를 json data로 파싱한다.
 		list = new ArrayList<>();
 		for (int i = 0; i < comboBox.length; i++) {
 			if(comboBox[i].getSelectedItem().equals("No")) {
@@ -354,10 +352,10 @@ public class OrderFood extends JFrame implements Runnable {
 			} else if(methods.equals("TIME")) {
 				ArriveTime(p.number);
 			} 
-		} else if(recvData.startsWith("CANCEL_OK")) {
+		} else if(recvData.startsWith("CANCEL_OK")) { //주문이 정상적으로 취소되었다는 응답
 			JOptionPane.showMessageDialog(this, "주문이 취소되었습니다..","주문 취소",
 					JOptionPane.INFORMATION_MESSAGE);
-		} else if(recvData.startsWith("CANCEL_FAIL")) {
+		} else if(recvData.startsWith("CANCEL_FAIL")) { //주문을 취소할 수없다는 응답
 			cancel = false;
 		} else if(recvData.startsWith("MORE")) {
 			int result = JOptionPane.showConfirmDialog(null, "주문이 밀려있어 시간이 더 소요될 예정입니다. "
