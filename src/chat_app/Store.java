@@ -5,13 +5,9 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
-import java.net.UnknownHostException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map.Entry;
-import java.util.Set;
 
 import javax.swing.DefaultListModel;
 import javax.swing.JButton;
@@ -39,7 +35,7 @@ public class Store extends JFrame{
 	private JPanel contentPane;
 	private JList<String> list;
 	private int count =1;
-	private JButton showTotalList,showCanceledList,deliverButton,exitButton;
+	private JButton showTotalList,deliverButton,exitButton;
 	private int deliverTime=0;
 	private final int CHICKEN_TIME = 10;
 	private final int PIZZA_TIME = 12;
@@ -78,17 +74,15 @@ public class Store extends JFrame{
 		if(recvData.startsWith("ORDER")) {
 			System.out.println("====================================");
 			recvData = recvData.substring(5);
-			if(currentList.size()<3) { // ÁÖ¹®ÀÌ 3°³ ÀÌÇÏÀÏ¶§ Á¤»óÃ³¸®
+			if(currentList.size()<3) { // ì£¼ë¬¸ì´ 3ê°œ ì´í•˜ì¼ë•Œ ì •ìƒì²˜ë¦¬
 				totalList.put(count, parseOrder(recvData));
-				currentList.put(count, parseOrder(recvData)); //HashMap¿¡ Order ³»¿ë Ãß°¡
+				currentList.put(count, parseOrder(recvData)); //HashMapì— Order ë‚´ìš© ì¶”ê°€
 				updateList();
 				System.out.println("deliverTime="+deliverTime);
-				//¿©±â¼­ deliverTimeÀÌ 20À¸·Î Àü´ŞµÊ ³»°¡ t=deliverTime-timer ÇÑ¹ø
-				//´õ °è»êÇÑ ÀÌÀ¯µµ Ã³À½¿¡ 20À¸·Î µé¾î°¡¼­ ±×·¨¾î
 				sendMsg(parseToJson("SUCCESS",++orderSeq,deliverTime));
-				addUserList(orderSeq,port); //userList¿¡ Ãß°¡
+				addUserList(orderSeq,port); //userListì— ì¶”ê°€
 			} else { 
-				//½Ã°£ÀÌ ´õ °É¸®´Âµ¥ ±¦Âú³Ä´Â ¸Ş½ÃÁö Àü¼Û
+				//ì‹œê°„ì´ ë” ê±¸ë¦¬ëŠ”ë° ê´œì°®ëƒëŠ” ë©”ì‹œì§€ ì „ì†¡
 				sendMsg("MORE_TIME_CHECK");
 			}
 		} 
@@ -110,17 +104,19 @@ public class Store extends JFrame{
 				default:
 					deliverTime = PORK_TIME;
 				}
-				int extraSeq = searchOrderCount(packet_TIME.seq);
-				t = deliverTime - timer + (extraSeq / 3) * 5;
+				
+				deliverTime = packet_TIME.orderTime;
+				t = deliverTime - timer;
 				if(t<0){
 					t=0;
 					sendMsg(parseToJson("SORRY",t));
 				}
-				else
+				else {
 					sendMsg(parseToJson("TIME",t));
+				}
 
 			} else if(methods.equals("CANCEL")) {
-				if(t>cookTime) { //¿ä¸®°¡ ½ÃÀÛµÇ¸é ÁÖ¹® Ãë¼Ò¸¦ ÇÒ ¼ö ¾ø°Ô ÇÏ±â À§ÇØ ÀÛ¼ºÇÔ
+				if(t>cookTime) { //ìš”ë¦¬ê°€ ì‹œì‘ë˜ë©´ ì£¼ë¬¸ ì·¨ì†Œë¥¼ í•  ìˆ˜ ì—†ê²Œ í•˜ê¸° ìœ„í•´ ì‘ì„±í•¨
 					cancelOrder(response.number);
 					sendMsg("CANCEL_OK");						
 				} else if(t<=cookTime) {
@@ -128,11 +124,11 @@ public class Store extends JFrame{
 				}
 			} 
 		} else if(recvData.startsWith("OK")) {
-			recvData = recvData.substring(8);//OK\nORDER\nÂ¥¸£°í jsonµ¥ÀÌÅÍ¸¸
+			recvData = recvData.substring(8);//OK\nORDER\nì§œë¥´ê³  jsonë°ì´í„°ë§Œ
 			totalList.put(count, parseOrder(recvData));
 			currentList.put(count, parseOrder(recvData));
 			updateList();
-			sendMsg(parseToJson("SUCCESS",++orderSeq));
+			sendMsg(parseToJson("SUCCESS",++orderSeq,deliverTime));
 			addUserList(orderSeq,port);
 		}
 	}
@@ -157,14 +153,15 @@ public class Store extends JFrame{
 		Gson gson = new Gson();
 		Menu menu = gson.fromJson(recvData,Menu.class);
 		String orderList = menu.main;
+		int additionalTime = currentList.size() / 3 * 10;
 		if(menu.main.equals("Chicken")) {	
-			deliverTime += CHICKEN_TIME;	
+			deliverTime = CHICKEN_TIME + additionalTime;	
 			cookTime = CHICKEN_TIME * 0.8f;
 		} else if(menu.main.equals("Pizza")) {
-			deliverTime += PIZZA_TIME;	
+			deliverTime = PIZZA_TIME + additionalTime;	
 			cookTime = PIZZA_TIME * 0.8f;
 		} else if(menu.main.equals("Pork")){
-			deliverTime += PORK_TIME;	
+			deliverTime = PORK_TIME + additionalTime;	
 			cookTime = PORK_TIME * 0.8f;
 		}
 		if(!menu.sub1.isEmpty()) orderList += ","+menu.sub1;
@@ -176,10 +173,10 @@ public class Store extends JFrame{
 
 	private void cancelOrder(int n) {
 		int key=0;
-		//»èÁ¦¿äÃ» µé¾î¿À¸é ¸ÕÀú, ÇØ´çÇÏ´Â ¹øÈ£¸¦ Ã£´Â´Ù
+		//ì‚­ì œìš”ì²­ ë“¤ì–´ì˜¤ë©´ ë¨¼ì €, í•´ë‹¹í•˜ëŠ” ë²ˆí˜¸ë¥¼ ì°¾ëŠ”ë‹¤
 		for(int i=0;i<model.getSize();i++) {
 			String msg = (String) model.getElementAt(i);
-			String arr[] = msg.split("¹ø");
+			String arr[] = msg.split("ë²ˆ");
 			key = Integer.parseInt(arr[0]);
 			if(n==key) {
 				currentList.remove(n); 
@@ -192,51 +189,51 @@ public class Store extends JFrame{
 	private void actionListener() {
 		showTotalList.addActionListener(e->{
 			if(totalList.size()==0) {
-				JOptionPane.showMessageDialog(this, "ÁÖ¹® ³»¿ªÀÌ ¾ø½À´Ï´Ù.", "Error",JOptionPane.CANCEL_OPTION);
+				JOptionPane.showMessageDialog(this, "ì£¼ë¬¸ ë‚´ì—­ì´ ì—†ìŠµë‹ˆë‹¤.", "Error",JOptionPane.CANCEL_OPTION);
 			}else {
 				String data = "";
 				for(int i=1;i<=totalList.size();i++) {
-					data += i+"¹ø ÁÖ¹®: "+totalList.get(i)+"\n";
+					data += i+"ë²ˆ ì£¼ë¬¸: "+totalList.get(i)+"\n";
 				}
-				JOptionPane.showMessageDialog(this, data, "ÃÑ ÁÖ¹® ³»¿ª",JOptionPane.INFORMATION_MESSAGE);
+				JOptionPane.showMessageDialog(this, data, "ì´ ì£¼ë¬¸ ë‚´ì—­",JOptionPane.INFORMATION_MESSAGE);
 			}
 		});
 		deliverButton.addActionListener(e->{
 			/*
-			 * 1. ¸®½ºÆ®¸¦ ¼±ÅÃÇÏ°í ¹öÆ° Å¬¸¯
-			 * 2. ¼±ÅÃÇÑ ÀÎµ¦½ºÀÇ ¸®½ºÆ®°¡ »èÁ¦
-			 * 3. »èÁ¦µÈ ¸®½ºÆ®ÀÇ ¹øÈ£¸¦ ÀĞ¾î¿È
-			 * 4. ÀĞ¾î¿Â ¹øÈ£¿¡ ÇØ´çÇÏ´Â userListÀÇ key¸¦ ÀÌ¿ëÇØ ÇØ´ç Æ÷Æ®·Î Àü¼Û
+			 * 1. ë¦¬ìŠ¤íŠ¸ë¥¼ ì„ íƒí•˜ê³  ë²„íŠ¼ í´ë¦­
+			 * 2. ì„ íƒí•œ ì¸ë±ìŠ¤ì˜ ë¦¬ìŠ¤íŠ¸ê°€ ì‚­ì œ
+			 * 3. ì‚­ì œëœ ë¦¬ìŠ¤íŠ¸ì˜ ë²ˆí˜¸ë¥¼ ì½ì–´ì˜´
+			 * 4. ì½ì–´ì˜¨ ë²ˆí˜¸ì— í•´ë‹¹í•˜ëŠ” userListì˜ keyë¥¼ ì´ìš©í•´ í•´ë‹¹ í¬íŠ¸ë¡œ ì „ì†¡
 			 */
 			int index = list.getSelectedIndex();
 			for(int i=0;i<model.size();i++) {
 				System.out.println(model.getElementAt(i));
 			}
-			if (index > -1) { //ÀÎµ¦½º°¡ Á¦´ë·Î ¼±ÅÃµÇ¾úÀ»¶§
+			if (index > -1) { //ì¸ë±ìŠ¤ê°€ ì œëŒ€ë¡œ ì„ íƒë˜ì—ˆì„ë•Œ
 				String data = (String) model.getElementAt(index);
-				String arr[] = data.split("¹ø");
+				String arr[] = data.split("ë²ˆ");
 				int user_key = Integer.parseInt(arr[0]);
-				//userKey¿¡ ¼±ÅÃµÈ ¸®½ºÆ®ÀÇ ¹øÈ£¸¦ ÀÔ·ÂÇÔ.
+				//userKeyì— ì„ íƒëœ ë¦¬ìŠ¤íŠ¸ì˜ ë²ˆí˜¸ë¥¼ ì…ë ¥í•¨.
 				currentList.remove(index);
 				model.remove(index);
 				list.setModel(model);
-				//ÀÎµ¦½º¸¦ »èÁ¦ÇÏ°í ¸®½ºÆ®¸¦ °»½ÅÇÔ
+				//ì¸ë±ìŠ¤ë¥¼ ì‚­ì œí•˜ê³  ë¦¬ìŠ¤íŠ¸ë¥¼ ê°±ì‹ í•¨
 				
 				int currentPort=userList.get(user_key);
 				sendMsg("DELIVER",currentPort);
-			} else { //¸®½ºÆ®¸¦ ¼±ÅÃÇÏÁö ¾Ê°í ¹è¼Û ¹öÆ°À» ´­·¶À» ¶§
-				JOptionPane.showMessageDialog(this, "¾Æ¹«°Íµµ ¼±ÅÃµÇÁö ¾Ê¾Ò½À´Ï´Ù", "¿À·ù",
+			} else { //ë¦¬ìŠ¤íŠ¸ë¥¼ ì„ íƒí•˜ì§€ ì•Šê³  ë°°ì†¡ ë²„íŠ¼ì„ ëˆŒë €ì„ ë•Œ
+				JOptionPane.showMessageDialog(this, "ì•„ë¬´ê²ƒë„ ì„ íƒë˜ì§€ ì•Šì•˜ìŠµë‹ˆë‹¤", "ì˜¤ë¥˜",
 						JOptionPane.ERROR_MESSAGE);
 			}
 		});
 		exitButton.addActionListener(e->{
-			//¸ğµç »ç¿ëÀÚ¿¡°Ô ºê·ÎµåÄ³½ºÆ®·Î ÁÖ¹®ÀÌ Ãë¼ÒµÇ¾úÀ½À» ¾Ë¸®°í Á¾·áÇÔ
+			//ëª¨ë“  ì‚¬ìš©ìì—ê²Œ ë¸Œë¡œë“œìºìŠ¤íŠ¸ë¡œ ì£¼ë¬¸ì´ ì·¨ì†Œë˜ì—ˆìŒì„ ì•Œë¦¬ê³  ì¢…ë£Œí•¨
 			if(model.isEmpty()) {
 				System.exit(0);
 			} else {
-				int result = JOptionPane.showConfirmDialog(null, "Á¾·áÇÏ¸é ¸ğµç ÁÖ¹®ÀÌ Ãë¼ÒµË´Ï´Ù. "
-						+ "±×·¡µµ Ãë¼ÒÇÏ½Ã°Ú½À´Ï±î??",
-						"Á¾·á È®ÀÎ", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
+				int result = JOptionPane.showConfirmDialog(null, "ì¢…ë£Œí•˜ë©´ ëª¨ë“  ì£¼ë¬¸ì´ ì·¨ì†Œë©ë‹ˆë‹¤. "
+						+ "ê·¸ë˜ë„ ì·¨ì†Œí•˜ì‹œê² ìŠµë‹ˆê¹Œ??",
+						"ì¢…ë£Œ í™•ì¸", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
 				if(result == JOptionPane.YES_OPTION) {
 					currentList.clear();
 					model.clear();
@@ -248,13 +245,13 @@ public class Store extends JFrame{
 		});
 	}
 	private void updateList() {
-		model.addElement(count+"¹ø: "+currentList.get(count));
+		model.addElement(count+"ë²ˆ: "+currentList.get(count));
 		list.setModel(model);
 		count++;
 	}
 
 	private void broadcastMsg(String msg) {
-		//userList¿¡ ÀÖ´Â ¸ğµç Æ÷Æ®¿¡ ¸Ş½ÃÁö º¸³»¾ßÇÔ.
+		//userListì— ìˆëŠ” ëª¨ë“  í¬íŠ¸ì— ë©”ì‹œì§€ ë³´ë‚´ì•¼í•¨.
 		byte[] buffer = msg.getBytes();
 		DatagramPacket dp;
 		for(int i=1;i<=userList.size();i++) {
@@ -276,7 +273,6 @@ public class Store extends JFrame{
 			ds.send(dp);
 			System.out.println("[Server -> Client] : "+data);
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}		
 	}
@@ -287,7 +283,6 @@ public class Store extends JFrame{
 			ds.send(dp);
 			System.out.println("[Server -> Client] : "+data);
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}		
 	}
@@ -302,7 +297,7 @@ public class Store extends JFrame{
 		contentPane.setLayout(null);
 
 		JLabel lblNewLabel = new JLabel("Store");
-		lblNewLabel.setFont(new Font("µ¸¿ò", Font.PLAIN, 12));
+		lblNewLabel.setFont(new Font("ë‹ì›€", Font.PLAIN, 12));
 		lblNewLabel.setBounds(105, 10, 57, 15);
 		contentPane.add(lblNewLabel);
 
@@ -310,18 +305,18 @@ public class Store extends JFrame{
 		list.setBounds(31, 25, 300, 205);
 		getContentPane().add(list);
 
-		showTotalList = new JButton("ÃÑ ÁÖ¹® ³»¿ª");
-		showTotalList.setFont(new Font("µ¸¿ò", Font.PLAIN, 12));
+		showTotalList = new JButton("ì´ ì£¼ë¬¸ ë‚´ì—­");
+		showTotalList.setFont(new Font("ë‹ì›€", Font.PLAIN, 12));
 		showTotalList.setBounds(350, 25, 150, 23);
 		contentPane.add(showTotalList);
 
-		deliverButton = new JButton("¹è¼ÛÇÏ±â");
-		deliverButton.setFont(new Font("µ¸¿ò", Font.PLAIN, 12));
+		deliverButton = new JButton("ë°°ì†¡í•˜ê¸°");
+		deliverButton.setFont(new Font("ë‹ì›€", Font.PLAIN, 12));
 		deliverButton.setBounds(350, 145, 150, 23);
 		contentPane.add(deliverButton);
 
 		exitButton = new JButton("4");
-		exitButton.setFont(new Font("µ¸¿ò", Font.PLAIN, 12));
+		exitButton.setFont(new Font("ë‹ì›€", Font.PLAIN, 12));
 		exitButton.setBounds(350, 205, 150, 23);
 		contentPane.add(exitButton);
 
@@ -340,17 +335,6 @@ public class Store extends JFrame{
 		else {
 			timer = 24 - (m_Hour)*60 - m_Minute;
 		}
-	}
-
-	private int searchOrderCount(int orderSeq) {
-		int count=0;
-		Iterator<Integer> iter = currentList.keySet().iterator();
-		while(iter.hasNext()) {
-			int key = iter.next();
-			if(key<orderSeq)
-				count++;	
-		}
-		return count;
 	}
 
 	public static void main(String[] args) {
