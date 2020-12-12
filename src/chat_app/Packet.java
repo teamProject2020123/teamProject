@@ -1,9 +1,9 @@
 package chat_app;
 
-public class Packet_RESPONSE{
+public class Packet{
 	String method;
 	int number;
-	public Packet_RESPONSE(String method, int number) {
+	public Packet(String method, int number) {
 		this.method = method;
 		this.number = number;
 	}

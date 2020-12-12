@@ -23,6 +23,7 @@ import com.google.gson.Gson;
 public class OrderFood extends JFrame implements Runnable {
 
 	private static final int DEST_PORT = 1004;
+//	private static final String DEST_IP = "172.18.15.142";
 	private static final String DEST_IP = "127.0.0.1";
 	private int myOrderSeq,myOrderTime;
 	private JPanel contentPane;
@@ -69,7 +70,7 @@ public class OrderFood extends JFrame implements Runnable {
 	}
 	private void actionListener() {
 		orderButton.addActionListener(e-> {
-			parseOrder();
+			parseOrder(); //일반 데이터를 json 객체로 parsing하는 메소드
 			int result = JOptionPane.showConfirmDialog(null, "주문하시겠습니까?"
 					,"CHECK_ORDER", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
 			if(result == JOptionPane.YES_OPTION) { 
@@ -128,7 +129,6 @@ public class OrderFood extends JFrame implements Runnable {
 						System.exit(0);											
 					} else {
 						JOptionPane.showMessageDialog(this, "이미 주문하신 음식이 만들어지고 있어서 취소할 수 없습니다.","취소 실패",
-								
 								JOptionPane.CANCEL_OPTION);
 					}
 				}).start();
@@ -312,7 +312,7 @@ public class OrderFood extends JFrame implements Runnable {
 		cancelButton.setEnabled(true);
 	}
 	private String parseToJson(String method, int number) {
-		Packet_RESPONSE p = new Packet_RESPONSE(method,number);
+		Packet p = new Packet(method,number);
 		String data = gson.toJson(p);
 		return data;
 	}
@@ -341,7 +341,7 @@ public class OrderFood extends JFrame implements Runnable {
 	}
 	private void recvMsg(String recvData) {
 		if(recvData.startsWith("{")) {
-			Packet_RESPONSE p = gson.fromJson(recvData, Packet_RESPONSE.class);
+			Packet p = gson.fromJson(recvData, Packet.class);
 			Packet_initialTime initialTime = gson.fromJson(recvData, Packet_initialTime.class);
 			String methods = p.method;
 			if(methods.equals("SUCCESS")) {
@@ -378,6 +378,7 @@ public class OrderFood extends JFrame implements Runnable {
 		} else if(recvData.startsWith("DELIVER")) {
 			JOptionPane.showMessageDialog(this, "주문하신 상품이 배달되었습니다.","알림",
 					JOptionPane.INFORMATION_MESSAGE);
+			sendMsg("ACK");
 			System.exit(0);
 		}
 	}
