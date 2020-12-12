@@ -351,7 +351,10 @@ public class OrderFood extends JFrame implements Runnable {
 				myOrderTime = initialTime.time; //시간을 받아서 저장함
 			} else if(methods.equals("TIME")) {
 				ArriveTime(p.number);
-			} 
+			} else if(methods.equals("SORRY")) {
+				JOptionPane.showMessageDialog(this, "가게의 사정으로 배달이 지연되고 있습니다.죄송합니다.","지연 알림",
+						JOptionPane.INFORMATION_MESSAGE);
+			}
 		} else if(recvData.startsWith("CANCEL_OK")) { //주문이 정상적으로 취소되었다는 응답
 			JOptionPane.showMessageDialog(this, "주문이 취소되었습니다..","주문 취소",
 					JOptionPane.INFORMATION_MESSAGE);
@@ -372,9 +375,6 @@ public class OrderFood extends JFrame implements Runnable {
 			JOptionPane.showMessageDialog(this, "스토어가 문을 닫았습니다.","종료 알림",
 					JOptionPane.INFORMATION_MESSAGE);
 			System.exit(0);
-		} else if(recvData.startsWith("SORRY")){
-			JOptionPane.showMessageDialog(this, "가게의 사정으로 배달이 지연되고 있습니다.죄송합니다.","지연 알림",
-					JOptionPane.INFORMATION_MESSAGE);		
 		} else if(recvData.startsWith("DELIVER")) {
 			JOptionPane.showMessageDialog(this, "주문하신 상품이 배달되었습니다.","알림",
 					JOptionPane.INFORMATION_MESSAGE);
